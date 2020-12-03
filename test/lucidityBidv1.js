@@ -34,7 +34,6 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
       owner.getAddress(),
       CT.address,
       "Honduras Agriculture Project",
-      "HAP",
       "Milestone1; Milestone2; Milestone3",
       [ethers.BigNumber.from("3"),ethers.BigNumber.from("6"),ethers.BigNumber.from("9")],
       [ethers.BigNumber.from("300"),ethers.BigNumber.from("600"),ethers.BigNumber.from("900")]

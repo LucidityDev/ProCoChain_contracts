@@ -16,8 +16,7 @@ interface IConditionalTokens {
         external;
 }
 
-//start stream from here? 
-//do conditional tokens make sense here - get some ammount of ERC20 that represents the health of the service?
+//do conditional tokens make sense here - get some amount of ERC20 that represents the health of the service?
 interface ISuperFluid {}
 
 contract BidTrackerFactory {
@@ -26,7 +25,7 @@ contract BidTrackerFactory {
 
     mapping(string => uint256) public nameToProjectIndex;
     BidTracker[] public projects;
-    // event NewProject(
+    // event NewProject( //remember you already set up theGraph for this
     //     string name,
     //     address owner,
     //     address project,
@@ -39,7 +38,6 @@ contract BidTrackerFactory {
         address _owner,
         address _ConditionalTokens,
         string memory _name,
-        string memory _symbol,
         string memory _milestones,
         uint256[] memory _timeline,
         uint256[] memory _budgets
@@ -50,7 +48,6 @@ contract BidTrackerFactory {
             _owner,
             _ConditionalTokens,
             _name,
-            _symbol,
             _milestones,
             _timeline,
             _budgets
@@ -60,7 +57,7 @@ contract BidTrackerFactory {
         nonce.increment(); //start at 1
         nameToProjectIndex[_name] = nonce.current();
 
-        //emit event
+        // //emit event
         // emit NewProject(
         //     _name,
         //     _owner,
@@ -69,7 +66,6 @@ contract BidTrackerFactory {
         //     _budgets,
         //     _milestones
         // );
-        //should create safe in here too, and add an address variable for the safe.
         return address(newProject);
     }
 
@@ -89,7 +85,6 @@ contract BidTrackerFactory {
 contract BidTracker {
     bool public ownerApproval = false;
     string public projectName;
-    string public symbol;
     string public milestones;
     address public owner;
     address public winningBidder;
@@ -97,27 +92,29 @@ contract BidTracker {
     uint256[] public timelinesOwner;
     uint256[] public budgetsOwner;
 
+    //bandwidth target
+    //days serviced target
+    //do we want a timeline for these? 
+    //number of people serviced?
+
     IConditionalTokens private ICT;
 
     event currentTermsApproved(address approvedBidder);
     event newBidSent(address Bidder, uint256[] timelines, uint256[] budgets);
 
-    mapping(address => uint256[]) public BidderToTimeline;
-    mapping(address => uint256[]) public BidderToBudgets;
-    mapping(address => bool) public BidderProposalStatus;
+    mapping(address => uint256[]) private BidderToTimeline;
+    mapping(address => uint256[]) private BidderToBudgets;
 
     constructor(
         address _owner,
         address _ConditionalToken,
         string memory _name,
-        string memory _symbol,
         string memory _milestones,
         uint256[] memory _timelines,
         uint256[] memory _budgets
     ) public {
         owner = _owner;
         projectName = _name;
-        symbol = _symbol;
         milestones = _milestones;
         timelinesOwner = _timelines;
         budgetsOwner = _budgets;
@@ -137,38 +134,61 @@ contract BidTracker {
         
         BidderToTimeline[msg.sender] = _timelines;
         BidderToBudgets[msg.sender] = _budgets;
-        BidderProposalStatus[msg.sender] = false;
         all_bidders.push(msg.sender);
         emit newBidSent(msg.sender, _timelines, _budgets);
     }
 
     //called by owner approval submit
     function approveBidderTerms(
-        address _bidder,
-        address _CTaddress,
-        address _ERC20address,
-        address auditor
+        address _bidder
+        // address _CTaddress,
+        // address _ERC20address,
+        // address auditor
     ) external {
         require(msg.sender == owner, "Only project owner can approve terms");
+        require(ownerApproval == false, "A bid has already been approved");
         ownerApproval = true;
-        BidderProposalStatus[_bidder] = true;
         winningBidder = _bidder;
 
         //adjust owner terms to be same as bidder terms
         budgetsOwner = BidderToBudgets[msg.sender];
         timelinesOwner = BidderToTimeline[msg.sender];
 
-        //start superfluid and CT? 
-
+        //maybe kick off a healthERC720 non-transferrable, that has a constructor with health values. 
+        //problem is that then the ERC20 is what goes into CT, health factor * base price? something like that, with limited group allowances
+        
         emit currentTermsApproved(_bidder);
     }
 
-    ////This section is for post bid approval management
+    //////This section is for post bid approval management
 
-    //adjust bid terms
-    //report to CT function
+    //bidder can propose new bid terms
+    function adjustBidTerms(uint256[] calldata _timelines, uint256[] calldata _budgets) public {
+        require(ownerApproval == true, "a bid has not been approved yet")
+        require(msg.sender == winningBidder, "only approved bidder can submit new terms")
+        BidderToBudgets[msg.sender] = _budgets;
+        BidderToTimeline[msg.sender] = _timelines;
+    }
+    //owner needs to approve new terms
+    function approveNewTerms() public {
+        require(ownerApproval == true, "a bid has not been approved yet")
+        require(msg.sender == owner, "only owner can approve new terms")
+        budgetsOwner = BidderToBudgets[msg.sender];
+        timelinesOwner = BidderToTimeline[msg.sender];
+        //this has to somehow update health token too? but then you can't adjust CT?
+        //this shouldn't affect superfluid 
+    }
 
-    ////Below are all external view functions
+    //set CT functions?
+    function setCT() public {
+
+    }
+
+    function reportOracle() public {
+        //review oracle calls from cryptozombies
+    }
+
+    //////Below are all external view functions
 
     //loads owner terms for bidder to see
     function loadOwnerTerms()
@@ -183,7 +203,7 @@ contract BidTracker {
         return (milestones, budgetsOwner, timelinesOwner);
     }
 
-    //loads all bidders
+    //loads all bidders addresses in an array
     function getAllBidderAddresses() external view returns (address[] memory) {
         return (all_bidders);
     }

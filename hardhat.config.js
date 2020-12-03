@@ -33,18 +33,9 @@ function mnemonic() {
 module.exports = {
   defaultNetwork,
 
-  // don't forget to set your provider like:
-  // REACT_APP_PROVIDER=https://dai.poa.network in packages/react-app/.env
-  // (then your frontend will talk to your contracts on the live network!)
-  // (you will need to restart the `yarn run start` dev server after editing the .env)
-
   networks: {
     localhost: {
       url: "http://localhost:8545",
-      /*
-        notice no mnemonic here? it will just use account 0 of the buidler node to deploy
-        (you can put in a mnemonic here to set the deployer locally)
-      */
     },
     rinkeby: {
       url: "https://rinkeby.infura.io/v3/d635ea6eddda4720824cc8b24380e4a9",
