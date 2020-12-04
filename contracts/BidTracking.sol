@@ -4,6 +4,8 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 
 //start milestones here? monthly reset? How often to set new conditions
 interface IConditionalTokens {
+    //how do we flexibly set? 
+    
     function splitPosition(
         address collateralToken,
         bytes32 parentCollectionId,
@@ -84,6 +86,7 @@ contract BidTrackerFactory {
 
 contract BidTracker {
     bool public ownerApproval = false;
+    uint16 public basePrice; 
     string public projectName;
     string public milestones;
     address public owner;
@@ -163,16 +166,17 @@ contract BidTracker {
     //////This section is for post bid approval management
 
     //bidder can propose new bid terms
-    function adjustBidTerms(uint256[] calldata _timelines, uint256[] calldata _budgets) public {
-        require(ownerApproval == true, "a bid has not been approved yet")
-        require(msg.sender == winningBidder, "only approved bidder can submit new terms")
+    function adjustBidTerms(uint256[] memory _timelines, uint256[] memory _budgets) public {
+        require(ownerApproval == true, "a bid has not been approved yet");
+        require(msg.sender == winningBidder, "only approved bidder can submit new terms");
         BidderToBudgets[msg.sender] = _budgets;
         BidderToTimeline[msg.sender] = _timelines;
     }
+
     //owner needs to approve new terms
     function approveNewTerms() public {
-        require(ownerApproval == true, "a bid has not been approved yet")
-        require(msg.sender == owner, "only owner can approve new terms")
+        require(ownerApproval == true, "a bid has not been approved yet");
+        require(msg.sender == owner, "only owner can approve new terms");
         budgetsOwner = BidderToBudgets[msg.sender];
         timelinesOwner = BidderToTimeline[msg.sender];
         //this has to somehow update health token too? but then you can't adjust CT?
