@@ -70,7 +70,19 @@ module.exports = {
     },
   },
   solidity: {
-    version: "0.6.6",
+    compilers: [
+      {
+        version: "0.5.11"
+      },
+      {
+        version: "0.6.0"
+      },
+      {
+        version:"0.5.8"
+      },
+      {
+        version:"0.6.7"
+      }],
     optimizer: {
       enabled: true,
       runs: 200,
