@@ -2,7 +2,6 @@
 pragma solidity >=0.6.0 <0.7.0;
 import "@openzeppelin/contracts/utils/Counters.sol";
 
-//start milestones here? monthly reset? How often to set new conditions
 interface IConditionalTokens {
     //how do we flexibly set? 
     
@@ -32,15 +31,13 @@ contract BidTrackerFactory {
     //     address owner,
     //     address project,
     //     uint256[] timelinesOwner,
-    //     uint256[] budgetsOwner,
-    //     string milestones
+    //     uint256[] budgetsOwner
     // );
 
     function deployNewProject(
         address _owner,
         address _ConditionalTokens,
         string memory _name,
-        string memory _milestones,
         uint256[] memory _timeline,
         uint256[] memory _budgets
     ) public returns (address) {
@@ -50,7 +47,6 @@ contract BidTrackerFactory {
             _owner,
             _ConditionalTokens,
             _name,
-            _milestones,
             _timeline,
             _budgets
         );
@@ -66,7 +62,6 @@ contract BidTrackerFactory {
         //     address(newProject),
         //     _timeline,
         //     _budgets,
-        //     _milestones
         // );
         return address(newProject);
     }
@@ -88,7 +83,6 @@ contract BidTracker {
     bool public ownerApproval = false;
     uint16 public basePrice; 
     string public projectName;
-    string public milestones;
     address public owner;
     address public winningBidder;
     address[] public all_bidders;
@@ -112,13 +106,11 @@ contract BidTracker {
         address _owner,
         address _ConditionalToken,
         string memory _name,
-        string memory _milestones,
         uint256[] memory _timelines,
         uint256[] memory _budgets
     ) public {
         owner = _owner;
         projectName = _name;
-        milestones = _milestones;
         timelinesOwner = _timelines;
         budgetsOwner = _budgets;
         ICT = IConditionalTokens(_ConditionalToken);
@@ -199,12 +191,11 @@ contract BidTracker {
         external
         view
         returns (
-            string memory _milestones,
             uint256[] memory _timelines,
             uint256[] memory _budgets
         )
     {
-        return (milestones, budgetsOwner, timelinesOwner);
+        return (budgetsOwner, timelinesOwner);
     }
 
     //loads all bidders addresses in an array

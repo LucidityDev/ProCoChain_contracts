@@ -7,7 +7,7 @@ const { abi: abiSFCF } = require("../superfluidartifacts/ConstantFlowAgreementV1
 const { ethers } = require("hardhat");
 
 describe("Internet Bid Lucidity Full Feature Test", function () {
-  let BidFactory, Dai, CT, SF, SFT,SFCF;
+  let BidFactory, Dai, CT, Sablier, SF, SFT, SFCF;
   let owner, bidder, auditor, funder;
 
   it("deploy factory contracts", async function () {
@@ -32,7 +32,12 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     );
     BidFactory = await BidFactoryContract.deploy();
 
-    //getting contract factory for SF and SFT
+    //Sablier
+    const SablierContract = await ethers.getContractFactory("Sablier");
+    Sablier = await SablierContract.deploy();
+    console.log(Sablier.functions)
+    
+    ////getting contract factory for SF, SFT, SF Constant Flow
     //deploy scripts inspired from https://github.com/superfluid-finance/superfluid-protocol-preview/tree/master/ethereum-contracts/scripts 
     //#region 
     const SFCFContract = new ethers.ContractFactory(
@@ -48,22 +53,14 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
       , owner
     );
     //#endregion
-    SF = await SFContract.deploy();
-    SFT = await SFTContract.deploy();
-    SFCF = await SFCFContract.deploy();
-    console.log("SF address: " + SF.address)
-    console.log("SFT address: " + SFT.address)
-    console.log("SFCF address: " + SFT.address)
-    // console.log(SFCF.functions) //checking that everything pulled through correctly 
-    
-    // const dai = await SF.contracts.TestToken.at(daiAddress); // this step is minting dai
-    const createdaixWrapper = await SF.connect(owner).createERC20Wrapper(Dai.address,ethers.BigNumber.from("15"), "Dai Wrapped","Daix");
-    console.log(createdaixWrapper)
-    
+    // SF = await SFContract.deploy();
+    // SFT = await SFTContract.deploy();
+    // SFCF = await SFCFContract.deploy();
+    // const createdaixWrapper = await SF.connect(owner).createERC20Wrapper(Dai.address,ethers.BigNumber.from("18"), "Dai Wrapped","Daix"); //Dai.decimal()
+    // console.log(createdaixWrapper)
     // const daixWrapper = await SF.getERC20Wrapper(Dai.address, "Dai");
     // console.log(daixWrapper)
-    // const daix = await SFT.at(daixWrapper.wrapperAddress); //what is this function doing? minting supertoken?
-
+    // const daix = await SFT.at(daixWrapper.wrapperAddress); //not sure if createwrapper launches an SFT?
     // SF.connect(owner).callAgreement(CFCF.address, CFCA.connect(owner).createFlow(daix.address, bidder.getAddress(), "385802469135802", "0x"))
   });
 
@@ -78,7 +75,6 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
       owner.getAddress(),
       CT.address,
       "Honduras Agriculture Project",
-      "Milestone1; Milestone2; Milestone3",
       [ethers.BigNumber.from("3"),ethers.BigNumber.from("6"),ethers.BigNumber.from("9")],
       [ethers.BigNumber.from("300"),ethers.BigNumber.from("600"),ethers.BigNumber.from("900")]
     );
