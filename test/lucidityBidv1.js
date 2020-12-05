@@ -8,6 +8,7 @@ const { ethers } = require("hardhat");
 
 describe("Internet Bid Lucidity Full Feature Test", function () {
   let BidFactory, Dai, CT, Sablier, SF, SFT, SFCF;
+  let streamId; //for sablier
   let owner, bidder, auditor, funder;
 
   it("deploy factory contracts", async function () {
@@ -20,13 +21,13 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     //using Dai contract 
     const DaiContract = await ethers.getContractFactory("Dai");
     Dai = await DaiContract.connect(owner).deploy(ethers.BigNumber.from("0"));
-    await Dai.connect(owner).mint(owner.getAddress(),ethers.BigNumber.from("100")) //mint to 
+    await Dai.connect(owner).mint(owner.getAddress(),ethers.BigNumber.from("10000000")) //mint to 
     
     const daibalance = await Dai.balanceOf(owner.getAddress());
     console.log("owner address: ", await owner.getAddress());
     console.log("owner balance of Dai: ", daibalance.toString());
   
-    //deploy neg contract
+    //deploy bid contract
     const BidFactoryContract = await ethers.getContractFactory(
       "BidTrackerFactory"
     );
@@ -35,9 +36,8 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     //Sablier
     const SablierContract = await ethers.getContractFactory("Sablier");
     Sablier = await SablierContract.deploy();
-    console.log(Sablier.functions)
-    
-    ////getting contract factory for SF, SFT, SF Constant Flow
+
+    ////getting contract factory for SF, SFT, SF Constant Flow *ignore*
     //deploy scripts inspired from https://github.com/superfluid-finance/superfluid-protocol-preview/tree/master/ethereum-contracts/scripts 
     //#region 
     const SFCFContract = new ethers.ContractFactory(
@@ -64,9 +64,23 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     // SF.connect(owner).callAgreement(CFCF.address, CFCA.connect(owner).createFlow(daix.address, bidder.getAddress(), "385802469135802", "0x"))
   });
 
-  it("check flow", async () => {
-    const balBidder = (await Dai.balanceOf(bidder.getAddress())).toString() /1e18
-    console.log("Bidder balance: " + balBidder)
+  it("create flow, check flow and withdraw", async () => {
+    //setting time boundaries, must be multiple of transfer amount 
+    const startTime = ethers.BigNumber.from(parseInt((new Date('Dec-05-2020 18:40:30').getTime() / 1000).toFixed(0)))
+    const endTime = ethers.BigNumber.from(parseInt((new Date('Dec-05-2020 18:40:35').getTime() / 1000).toFixed(0)))
+    
+    await Dai.connect(owner).approve(Sablier.address,ethers.BigNumber.from("100")) //dai approval 
+
+    streamId = await Sablier.connect(owner).createStream(bidder.getAddress(),ethers.BigNumber.from("100"),Dai.address,startTime,endTime)
+
+    console.log(streamId.data.toString()) //not sure why this is returning transaction and not value
+
+    //check stream balance
+    const streamInfoI = await Sablier.connect(owner).getStream(ethers.BigNumber.from("1"))
+    console.log(streamInfoI)
+    
+    // const withdrawInfo = await Sablier.connect(bidder).withdrawFromStream(streamId, ethers.BigNumber.from("100"))
+    // console.log(withdrawInfo)
   });
 
   xit("initiate project, bid, and then approval", async function () {
