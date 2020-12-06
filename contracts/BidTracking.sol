@@ -3,7 +3,7 @@ pragma solidity >=0.6.0 <0.7.0;
 import "@openzeppelin/contracts/utils/Counters.sol";
 
 interface IConditionalTokens {
-    //how do we flexibly set? 
+    //how do we flexibly set outcomes? 
     
     function splitPosition(
         address collateralToken,
