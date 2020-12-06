@@ -17,8 +17,8 @@ interface IConditionalTokens {
         external;
 }
 
-//do conditional tokens make sense here - get some amount of ERC20 that represents the health of the service?
-interface ISuperFluid {}
+//to fill in
+interface ISablier {}
 
 contract BidTrackerFactory {
     using Counters for Counters.Counter;
@@ -30,16 +30,16 @@ contract BidTrackerFactory {
     //     string name,
     //     address owner,
     //     address project,
-    //     uint256[] timelinesOwner,
-    //     uint256[] budgetsOwner
+    //     uint256[] speedtargets,
+    //     uint256[] targetbounties
     // );
 
     function deployNewProject(
         address _owner,
         address _ConditionalTokens,
         string memory _name,
-        uint256[] memory _timeline,
-        uint256[] memory _budgets
+        uint256[] memory _speedtargets,
+        uint256[] memory _bounties
     ) public returns (address) {
         //need to check if name or symbol already exists
         require(nameToProjectIndex[_name] == 0, "Name has already been taken");
@@ -47,8 +47,8 @@ contract BidTrackerFactory {
             _owner,
             _ConditionalTokens,
             _name,
-            _timeline,
-            _budgets
+            _speedtargets,
+            _bounties
         );
         projects.push(newProject);
 
@@ -60,8 +60,8 @@ contract BidTrackerFactory {
         //     _name,
         //     _owner,
         //     address(newProject),
-        //     _timeline,
-        //     _budgets,
+        //     _speedtargets,
+        //     _bounties,
         // );
         return address(newProject);
     }
@@ -86,8 +86,8 @@ contract BidTracker {
     address public owner;
     address public winningBidder;
     address[] public all_bidders;
-    uint256[] public timelinesOwner;
-    uint256[] public budgetsOwner;
+    uint256[] public speedtargetOwner;
+    uint256[] public targetbountyOwner;
 
     //bandwidth target
     //days serviced target
@@ -99,27 +99,27 @@ contract BidTracker {
     event currentTermsApproved(address approvedBidder);
     event newBidSent(address Bidder, uint256[] timelines, uint256[] budgets);
 
-    mapping(address => uint256[]) private BidderToTimeline;
-    mapping(address => uint256[]) private BidderToBudgets;
+    mapping(address => uint256[]) private BidderToTargets;
+    mapping(address => uint256[]) private BidderToBounties;
 
     constructor(
         address _owner,
         address _ConditionalToken,
         string memory _name,
-        uint256[] memory _timelines,
-        uint256[] memory _budgets
+        uint256[] memory _speedtargets,
+        uint256[] memory _bounties
     ) public {
         owner = _owner;
         projectName = _name;
-        timelinesOwner = _timelines;
-        budgetsOwner = _budgets;
+        speedtargetOwner = _speedtargets;
+        targetbountyOwner = _bounties;
         ICT = IConditionalTokens(_ConditionalToken);
     }
 
     //called by bidder submit
     function newBidderTerms(
-        uint256[] calldata _timelines,
-        uint256[] calldata _budgets
+        uint256[] calldata _speedtargets,
+        uint256[] calldata _bounties
     ) external {
         require(
             ownerApproval == false,
@@ -127,10 +127,10 @@ contract BidTracker {
         );
         require(msg.sender != owner, "owner cannot create a bid");
         
-        BidderToTimeline[msg.sender] = _timelines;
-        BidderToBudgets[msg.sender] = _budgets;
+        BidderToTargets[msg.sender] = _speedtargets;
+        BidderToBounties[msg.sender] = _bounties;
         all_bidders.push(msg.sender);
-        emit newBidSent(msg.sender, _timelines, _budgets);
+        emit newBidSent(msg.sender, _speedtargets, _bounties);
     }
 
     //called by owner approval submit
@@ -146,8 +146,8 @@ contract BidTracker {
         winningBidder = _bidder;
 
         //adjust owner terms to be same as bidder terms
-        budgetsOwner = BidderToBudgets[msg.sender];
-        timelinesOwner = BidderToTimeline[msg.sender];
+        targetbountyOwner = BidderToBounties[msg.sender];
+        speedtargetOwner = BidderToTargets[msg.sender];
 
         //maybe kick off a healthERC720 non-transferrable, that has a constructor with health values. 
         //problem is that then the ERC20 is what goes into CT, health factor * base price? something like that, with limited group allowances
@@ -158,19 +158,19 @@ contract BidTracker {
     //////This section is for post bid approval management
 
     //bidder can propose new bid terms
-    function adjustBidTerms(uint256[] memory _timelines, uint256[] memory _budgets) public {
+    function adjustBidTerms(uint256[] memory _speedtargets, uint256[] memory _bounties) public {
         require(ownerApproval == true, "a bid has not been approved yet");
         require(msg.sender == winningBidder, "only approved bidder can submit new terms");
-        BidderToBudgets[msg.sender] = _budgets;
-        BidderToTimeline[msg.sender] = _timelines;
+        BidderToBounties[msg.sender] = _bounties;
+        BidderToTargets[msg.sender] = _speedtargets;
     }
 
     //owner needs to approve new terms
     function approveNewTerms() public {
         require(ownerApproval == true, "a bid has not been approved yet");
         require(msg.sender == owner, "only owner can approve new terms");
-        budgetsOwner = BidderToBudgets[msg.sender];
-        timelinesOwner = BidderToTimeline[msg.sender];
+        targetbountyOwner = BidderToBounties[msg.sender];
+        speedtargetOwner = BidderToTargets[msg.sender];
         //this has to somehow update health token too? but then you can't adjust CT?
         //this shouldn't affect superfluid 
     }
@@ -191,11 +191,11 @@ contract BidTracker {
         external
         view
         returns (
-            uint256[] memory _timelines,
-            uint256[] memory _budgets
+            uint256[] memory _speedtargets,
+            uint256[] memory _bounties
         )
     {
-        return (budgetsOwner, timelinesOwner);
+        return (speedtargetOwner, targetbountyOwner);
     }
 
     //loads all bidders addresses in an array
@@ -207,12 +207,12 @@ contract BidTracker {
     function loadBidderTerms(address _bidder)
         external
         view
-        returns (uint256[] memory _timelines, uint256[] memory _budgets)
+        returns (uint256[] memory _speedtargets, uint256[] memory _bounties)
     {
         require(
             msg.sender == owner,
             "Only project owner can see proposed terms"
         );
-        return (BidderToTimeline[_bidder], BidderToBudgets[_bidder]);
+        return (BidderToTargets[_bidder], BidderToBounties[_bidder]);
     }
 }

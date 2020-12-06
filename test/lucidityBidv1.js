@@ -64,7 +64,9 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     // SF.connect(owner).callAgreement(CFCF.address, CFCA.connect(owner).createFlow(daix.address, bidder.getAddress(), "385802469135802", "0x"))
   });
 
-  it("create flow, check flow and withdraw", async () => {
+  it("create flow, check flow info", async () => {
+    /** note for nick, the way this is initialized must somehow be put into the bidtracking contract to call sablier through an interface */
+
     //setting time boundaries, must be multiple of transfer amount 
     const startTime = ethers.BigNumber.from(parseInt((new Date('Dec-06-2020 18:40:30').getTime() / 1000).toFixed(0)))
     const endTime = ethers.BigNumber.from(parseInt((new Date('Dec-06-2020 18:40:35').getTime() / 1000).toFixed(0)))
@@ -77,28 +79,32 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
 
     //check stream balance
     const streamInfoI = await Sablier.connect(owner).getStream(ethers.BigNumber.from("1"))
+    console.log("total stream size/deposit (dai): " + streamInfoI.deposit.toString())
     console.log("rate per second: " + streamInfoI.ratePerSecond.toString())
     console.log("stop time: " + new Date(parseInt(streamInfoI.stopTime.toString()) * 1000))
 
     const balanceAfterCreate = await Dai.balanceOf(owner.getAddress())
-    console.log("Balance of dai owner post create: " + balanceAfterCreate)
-    
+    console.log("Owner balance dai post stream create: " + balanceAfterCreate)
+  });
+
+    it("check balance of stream and withdraw", async () => {  
+    const balanceOfStream = await Sablier.connect(bidder).balanceOf(ethers.BigNumber.from("1"), bidder.getAddress())
+    console.log("Available to withdraw from stream: " + balanceOfStream)
     // const withdrawInfo = await Sablier.connect(bidder).withdrawFromStream(streamId, ethers.BigNumber.from("100"))
     // console.log(withdrawInfo)
   });
 
-  xit("initiate project, bid, and then approval", async function () {
+  it("initiate project, bid, and then approval", async function () {
     //create project to be bid on
     await BidFactory.connect(owner).deployNewProject(
       owner.getAddress(),
       CT.address,
       "Honduras Agriculture Project",
-      [ethers.BigNumber.from("3"),ethers.BigNumber.from("6"),ethers.BigNumber.from("9")],
-      [ethers.BigNumber.from("300"),ethers.BigNumber.from("600"),ethers.BigNumber.from("900")]
+      [ethers.BigNumber.from("3"),ethers.BigNumber.from("5"),ethers.BigNumber.from("10")],
+      [ethers.BigNumber.from("300"),ethers.BigNumber.from("500"),ethers.BigNumber.from("1000")]
     );
 
     const lawproject = await BidFactory.getProject("Honduras Agriculture Project");
-    console.log("Project owner terms deployed with new bid tracker")
     console.log(lawproject)
 
     const lawProjectContract = new ethers.Contract(
@@ -112,7 +118,10 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
         [ethers.BigNumber.from("400"),ethers.BigNumber.from("600"),ethers.BigNumber.from("900")])
 
     const bidderterms = await lawProjectContract.connect(owner).loadBidderTerms(bidder.getAddress())
-    console.log("bidder address: ", await bidder.getAddress());
+    console.log("new bid from bidder address: ", await bidder.getAddress());
+    console.log(bidderterms);
+
+    //need approval, and check if stream kickoff worked
   });
 
   xit("testing data oracle", async () => {
