@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity >=0.6.0 <0.7.0;
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
 interface IConditionalTokens {
-    //how do we flexibly set outcomes? 
-    
+    // how do we flexibly set outcomes? 
+    // getConditionId
+    // prepareCondition
+    // getCollectionId
+    // getPositionId
+
     function splitPosition(
         address collateralToken,
         bytes32 parentCollectionId,
@@ -20,65 +25,6 @@ interface IConditionalTokens {
 //to fill in
 interface ISablier {}
 
-contract BidTrackerFactory {
-    using Counters for Counters.Counter;
-    Counters.Counter public nonce; // acts as unique identifier for minted NFTs
-
-    mapping(string => uint256) public nameToProjectIndex;
-    BidTracker[] public projects;
-    // event NewProject( //remember you already set up theGraph for this
-    //     string name,
-    //     address owner,
-    //     address project,
-    //     uint256[] speedtargets,
-    //     uint256[] targetbounties
-    // );
-
-    function deployNewProject(
-        address _owner,
-        address _ConditionalTokens,
-        string memory _name,
-        uint256[] memory _speedtargets,
-        uint256[] memory _bounties
-    ) public returns (address) {
-        //need to check if name or symbol already exists
-        require(nameToProjectIndex[_name] == 0, "Name has already been taken");
-        BidTracker newProject = new BidTracker(
-            _owner,
-            _ConditionalTokens,
-            _name,
-            _speedtargets,
-            _bounties
-        );
-        projects.push(newProject);
-
-        nonce.increment(); //start at 1
-        nameToProjectIndex[_name] = nonce.current();
-
-        // //emit event
-        // emit NewProject(
-        //     _name,
-        //     _owner,
-        //     address(newProject),
-        //     _speedtargets,
-        //     _bounties,
-        // );
-        return address(newProject);
-    }
-
-    function getProject(string memory _name)
-        public
-        view
-        returns (address projectAddress, string memory name)
-    {
-
-            BidTracker selectedProject
-         = projects[nameToProjectIndex[_name] - 1];
-
-        return (address(selectedProject), selectedProject.projectName());
-    }
-}
-
 contract BidTracker {
     bool public ownerApproval = false;
     uint16 public basePrice; 
@@ -89,22 +35,20 @@ contract BidTracker {
     uint256[] public speedtargetOwner;
     uint256[] public targetbountyOwner;
 
-    //bandwidth target
-    //days serviced target
-    //do we want a timeline for these? 
-    //number of people serviced?
-
+    IERC1155 private IERC1155C;
     IConditionalTokens private ICT;
+    ISablier private ISB;
 
     event currentTermsApproved(address approvedBidder);
-    event newBidSent(address Bidder, uint256[] timelines, uint256[] budgets);
 
+    //these need to be private
     mapping(address => uint256[]) private BidderToTargets;
     mapping(address => uint256[]) private BidderToBounties;
 
     constructor(
         address _owner,
         address _ConditionalToken,
+        address _Sablier,
         string memory _name,
         uint256[] memory _speedtargets,
         uint256[] memory _bounties
@@ -113,6 +57,8 @@ contract BidTracker {
         projectName = _name;
         speedtargetOwner = _speedtargets;
         targetbountyOwner = _bounties;
+        ISB = ISablier(_Sablier);
+        IERC1155C = IERC1155(_ConditionalToken);
         ICT = IConditionalTokens(_ConditionalToken);
     }
 
@@ -130,7 +76,6 @@ contract BidTracker {
         BidderToTargets[msg.sender] = _speedtargets;
         BidderToBounties[msg.sender] = _bounties;
         all_bidders.push(msg.sender);
-        emit newBidSent(msg.sender, _speedtargets, _bounties);
     }
 
     //called by owner approval submit
@@ -149,40 +94,85 @@ contract BidTracker {
         targetbountyOwner = BidderToBounties[msg.sender];
         speedtargetOwner = BidderToTargets[msg.sender];
 
-        //maybe kick off a healthERC720 non-transferrable, that has a constructor with health values. 
-        //problem is that then the ERC20 is what goes into CT, health factor * base price? something like that, with limited group allowances
-        
+        //kick off sablier stream 
+        //kick off CT setting loop, though this is going to be like 4 * # milestones of approvals
+
         emit currentTermsApproved(_bidder);
     }
 
-    //////This section is for post bid approval management
+    //CT functions, loop through length of milestones//
+    function setPositions(
 
-    //bidder can propose new bid terms
-    function adjustBidTerms(uint256[] memory _speedtargets, uint256[] memory _bounties) public {
-        require(ownerApproval == true, "a bid has not been approved yet");
-        require(msg.sender == winningBidder, "only approved bidder can submit new terms");
-        BidderToBounties[msg.sender] = _bounties;
-        BidderToTargets[msg.sender] = _speedtargets;
+    ) external {
+    // getConditionId
+    // prepareCondition
+    // getCollectionId
+    // getPositionId
+    // return all the gets? 
+    }
+    
+    function callSplitPosition(
+        address tokenaddress,
+        bytes32 parent,
+        bytes32 conditionId,
+        uint256[] calldata partition,
+        uint256 value //bytes32 approvalPositionId,
+    ) external {
+        ICT.splitPosition(
+            tokenaddress,
+            parent,
+            conditionId,
+            partition,
+            value
+        );
+        //totalValue = totalValue.sub(value); figure out how this is being called (i.e. how is money getting to this contract in the first place)
     }
 
-    //owner needs to approve new terms
-    function approveNewTerms() public {
-        require(ownerApproval == true, "a bid has not been approved yet");
-        require(msg.sender == owner, "only owner can approve new terms");
-        targetbountyOwner = BidderToBounties[msg.sender];
-        speedtargetOwner = BidderToTargets[msg.sender];
-        //this has to somehow update health token too? but then you can't adjust CT?
-        //this shouldn't affect superfluid 
+    //transfer CT tokens to bidder wallet for a certain positionId. There should be a way to transfer CT to owner too.
+    function transferCTtoBidder(uint256 positionId) external payable {
+        require(
+            msg.sender == winningBidder,
+            "only bidder can redeem conditional tokens"
+        );
+        uint256 heldAmount = IERC1155C.balanceOf(address(this), positionId); //need to make it so only approve position id is transferrable
+
+        IERC1155C.safeTransferFrom(
+            address(this),
+            msg.sender,
+            positionId,
+            heldAmount,
+            ""
+        );
     }
 
-    //set CT functions?
-    function setCT() public {
-
+    //reportPayouts() should call fetchOracle()
+    function callReportPayouts(bytes32 questionID, uint256[] calldata outcome)
+        external
+    {
+        require(msg.sender == owner, "not owner"); //later this should only be called from governance contract with a vote
+        ICT.reportPayouts(questionID, outcome);
     }
 
-    function reportOracle() public {
-        //review oracle calls from cryptozombies
+    function fetchOracleData(uint256 speedtarget) internal {
+        //still need to do this
     }
+
+    // //winning bidder can propose new bid terms 
+    // function adjustBidTerms(uint256[] memory _speedtargets, uint256[] memory _bounties) public {
+    //     require(ownerApproval == true, "a bid has not been approved yet");
+    //     require(msg.sender == winningBidder, "only approved bidder can submit new terms");
+    //     BidderToBounties[msg.sender] = _bounties;
+    //     BidderToTargets[msg.sender] = _speedtargets;
+    // }
+
+    // //owner needs to approve new terms
+    // function approveNewTerms() public {
+    //     require(ownerApproval == true, "a bid has not been approved yet");
+    //     require(msg.sender == owner, "only owner can approve new terms");
+    //     targetbountyOwner = BidderToBounties[msg.sender];
+    //     speedtargetOwner = BidderToTargets[msg.sender];
+    //     //this has to somehow affect stream? start and cancel again here? 
+    // }
 
     //////Below are all external view functions
 

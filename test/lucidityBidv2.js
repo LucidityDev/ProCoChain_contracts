@@ -1,5 +1,5 @@
 const { expect } = require("chai");
-const { abi: abiNeg } = require("../artifacts/contracts/BidTracking.sol/BidTracker.json");
+const { abi: abiNeg } = require("../artifacts/contracts/BidTracker.sol/BidTracker.json");
 const { abi: abiSF } = require("../superfluidartifacts/Superfluid.json");
 const { abi: abiSFT } = require("../superfluidartifacts/SuperToken.json");
 const { abi: abiSFCF } = require("../superfluidartifacts/ConstantFlowAgreementV1.json");
@@ -9,13 +9,13 @@ const { ethers } = require("hardhat");
 describe("Internet Bid Lucidity Full Feature Test", function () {
   let BidFactory, Dai, CT, Sablier, SF, SFT, SFCF;
   let streamId; //for sablier
-  let owner, bidder, auditor, funder;
+  let owner, bidder, auditor;
 
   it("deploy factory contracts", async function () {
-     [owner, bidder, auditor] = await ethers.getSigners(); //jsonrpc signers from default 20 accounts with 10000 ETH each
+     [owner, bidder, auditor] = await ethers.getSigners(); 
 
     //conditional tokens
-    const CTContract = await ethers.getContractFactory("ConditionalTokens"); //contract name here
+    const CTContract = await ethers.getContractFactory("ConditionalTokens");
     CT = await CTContract.deploy();
 
     //using Dai contract 
@@ -99,6 +99,7 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     await BidFactory.connect(owner).deployNewProject(
       owner.getAddress(),
       CT.address,
+      Sablier.address,
       "Honduras Agriculture Project",
       [ethers.BigNumber.from("3"),ethers.BigNumber.from("5"),ethers.BigNumber.from("10")],
       [ethers.BigNumber.from("300"),ethers.BigNumber.from("500"),ethers.BigNumber.from("1000")]
@@ -124,7 +125,7 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     //need approval, and check if stream kickoff worked
   });
 
-  xit("testing data oracle", async () => {
+  xit("testing data oracle to report on milestone 3mb", async () => {
     //need to setup a new contract that acts as the data oracle on chain, so that it can be replaced if neccessary.     
   })
 });
