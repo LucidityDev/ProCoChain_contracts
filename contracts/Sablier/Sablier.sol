@@ -259,6 +259,7 @@ contract Sablier is IERC1620, Exponential, ReentrancyGuard {
         onlySenderOrRecipient(streamId)
         returns (bool)
     {
+        //add custom require functions here that read from oracle
         require(amount > 0, "amount is zero");
         Types.Stream memory stream = streams[streamId];
         WithdrawFromStreamLocalVars memory vars;

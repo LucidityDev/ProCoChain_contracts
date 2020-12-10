@@ -27,13 +27,14 @@ interface ISablier {}
 
 contract BidTracker {
     bool public ownerApproval = false;
-    uint16 public basePrice; 
-    string public projectName;
+    uint16 public basePrice; //needs to be added to constructor
+    string public projectName; //probably could be stored as bytes?
     address public owner;
-    address public winningBidder;
-    address[] public all_bidders;
-    uint256[] public speedtargetOwner;
-    uint256[] public targetbountyOwner;
+    address private oracleAddress; 
+    address public winningBidder; //this only needs to be stored if we have post bid edits
+    address[] public all_bidders; //should be able to replace this with event
+    uint256[] public speedtargetOwner; //wonder if string would be cheaper, also if timeline is neccessary
+    uint256[] public targetbountyOwner; 
 
     IERC1155 private IERC1155C;
     IConditionalTokens private ICT;
@@ -151,6 +152,11 @@ contract BidTracker {
     {
         require(msg.sender == owner, "not owner"); //later this should only be called from governance contract with a vote
         ICT.reportPayouts(questionID, outcome);
+    }
+
+    function updateOracle(address newOracleAddress) external {
+        require(msg.sender == owner, "Only owner can update oracle");
+        oracleAddress = newOracleAddress;
     }
 
     function fetchOracleData(uint256 speedtarget) internal {
