@@ -38,7 +38,7 @@ contract BidTracker {
 
     IERC1155 private IERC1155C;
     IConditionalTokens private ICT;
-    ISablier private ISB;
+    IConstantFlowAgreementV1 private ICFA;
 
     event currentTermsApproved(address approvedBidder);
 
@@ -49,7 +49,7 @@ contract BidTracker {
     constructor(
         address _owner,
         address _ConditionalToken,
-        address _Sablier,
+        address _Superfluid,
         string memory _name,
         uint256[] memory _speedtargets,
         uint256[] memory _bounties
@@ -58,7 +58,7 @@ contract BidTracker {
         projectName = _name;
         speedtargetOwner = _speedtargets;
         targetbountyOwner = _bounties;
-        ISB = ISablier(_Sablier);
+        ICFA = IConstantFlowAgreementV1(_Superfluid);
         IERC1155C = IERC1155(_ConditionalToken);
         ICT = IConditionalTokens(_ConditionalToken);
     }
@@ -83,7 +83,7 @@ contract BidTracker {
     function approveBidderTerms(
         address _bidder
         // address _CTaddress,
-        // address _ERC20address,
+   	// address _ERC20address,
         // address auditor
     ) external {
         require(msg.sender == owner, "Only project owner can approve terms");
@@ -92,10 +92,21 @@ contract BidTracker {
         winningBidder = _bidder;
 
         //adjust owner terms to be same as bidder terms
-        targetbountyOwner = BidderToBounties[msg.sender];
-        speedtargetOwner = BidderToTargets[msg.sender];
+        targetbountyOwner = BidderToBounties[_bidder];
+        speedtargetOwner = BidderToTargets[_bidder];
 
         //kick off sablier stream 
+
+	//ICFA.createFlow(
+	//      ISuperToken token,
+	//      address receiver,
+	//      int96 flowRate,
+	//      bytes calldata ctx
+	//  )
+        //  external
+        //  virtual
+        //  returns(bytes memory newCtx);	
+
         //kick off CT setting loop, though this is going to be like 4 * # milestones of approvals
 
         emit currentTermsApproved(_bidder);
