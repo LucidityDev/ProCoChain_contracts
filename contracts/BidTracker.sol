@@ -23,7 +23,7 @@ interface IConditionalTokens {
 }
 
 //to fill in
-interface ISablier {}
+interface IConstantFlowAgreementV1 {}
 
 contract BidTracker {
     bool public ownerApproval = false;
