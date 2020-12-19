@@ -2,6 +2,7 @@
 pragma solidity >=0.6.0 <0.7.0;
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 interface IConditionalTokens {
     // how do we flexibly set outcomes? 
@@ -26,6 +27,9 @@ interface IConditionalTokens {
 interface ISablier {}
 
 contract BidTracker {
+    
+    using SafeMath for uint256;
+	
     bool public ownerApproval = false;
     uint16 public basePrice; //needs to be added to constructor
     string public projectName; //probably could be stored as bytes?
@@ -33,8 +37,10 @@ contract BidTracker {
     address private oracleAddress; 
     address public winningBidder; //this only needs to be stored if we have post bid edits
     address[] public all_bidders; //should be able to replace this with event
-    uint256[] public speedtargetOwner; //wonder if string would be cheaper, also if timeline is neccessary
-    uint256[] public targetbountyOwner; 
+    uint256[] public bountySpeedTargetOwner; //wonder if string would be cheaper, also if timeline is neccessary
+    uint256[] public targetBountyOwner; 
+    uint256 public speedTargetOwner;
+    uint256 public streamAmountOwner;
 
     IERC1155 private IERC1155C;
     IConditionalTokens private ICT;
@@ -45,19 +51,25 @@ contract BidTracker {
     //these need to be private
     mapping(address => uint256[]) private BidderToTargets;
     mapping(address => uint256[]) private BidderToBounties;
+    mapping(address => uint256) private BidderToStreamSpeed;
+    mapping(address => uint256) private BidderToStreamAmount;
 
     constructor(
         address _owner,
         address _ConditionalToken,
         address _Superfluid,
         string memory _name,
-        uint256[] memory _speedtargets,
-        uint256[] memory _bounties
+        uint256[] memory _bountySpeedTargets,
+        uint256[] memory _bounties,
+	uint256 _streamSpeedTarget,
+	uint256 _streamAmountTotal
     ) public {
         owner = _owner;
         projectName = _name;
-        speedtargetOwner = _speedtargets;
-        targetbountyOwner = _bounties;
+        bountySpeedTargetOwner = _bountySpeedTargets;
+        targetBountyOwner = _bounties;
+	speedTargetOwner = _streamSpeedTarget;	
+	streamAmountOwner = _streamAmountTotal;
         ICFA = IConstantFlowAgreementV1(_Superfluid);
         IERC1155C = IERC1155(_ConditionalToken);
         ICT = IConditionalTokens(_ConditionalToken);
@@ -65,8 +77,10 @@ contract BidTracker {
 
     //called by bidder submit
     function newBidderTerms(
-        uint256[] calldata _speedtargets,
-        uint256[] calldata _bounties
+        uint256[] calldata _bountySpeedTargets,
+        uint256[] calldata _bounties,
+	uint256 _streamSpeedTarget,
+	uint256 _streamAmountTotal
     ) external {
         require(
             ownerApproval == false,
@@ -74,17 +88,24 @@ contract BidTracker {
         );
         require(msg.sender != owner, "owner cannot create a bid");
         
-        BidderToTargets[msg.sender] = _speedtargets;
+        BidderToTargets[msg.sender] = _bountySpeedTargets;
         BidderToBounties[msg.sender] = _bounties;
+	BidderToStreamSpeed[msg.sender] = _streamSpeedTarget;
+	BidderToStreamAmount[msg.sender] = _streamAmountTotal;
         all_bidders.push(msg.sender);
     }
 
     //called by owner approval submit
     function approveBidderTerms(
-        address _bidder
-        // address _CTaddress,
+        address _bidder,
+  	// ISuperToken token,
+	// address receiver,
+	// uint256 endTime,
+	// address _CTaddress,
    	// address _ERC20address,
-        // address auditor
+        // address auditor,
+	// uint startdate,
+	// uint
     ) external {
         require(msg.sender == owner, "Only project owner can approve terms");
         require(ownerApproval == false, "A bid has already been approved");
@@ -92,25 +113,43 @@ contract BidTracker {
         winningBidder = _bidder;
 
         //adjust owner terms to be same as bidder terms
-        targetbountyOwner = BidderToBounties[_bidder];
-        speedtargetOwner = BidderToTargets[_bidder];
+        targetBountyOwner = BidderToBounties[_bidder];
+        bountySpeedTargetOwner = BidderToTargets[_bidder];
+	speedTargetOwner = BidderToStreamSpeed[_bidder];
+	streamAmountOwner = BidderToStreamAmount[_bidder];
 
         //kick off sablier stream 
 
-	//ICFA.createFlow(
-	//      ISuperToken token,
-	//      address receiver,
-	//      int96 flowRate,
-	//      bytes calldata ctx
-	//  )
-        //  external
-        //  virtual
-        //  returns(bytes memory newCtx);	
-
-        //kick off CT setting loop, though this is going to be like 4 * # milestones of approvals
+	startFlow(token, receiver, streamAmountOwner, endTime);
+	
+	//kick off CT setting loop, though this is going to be like 4 * # milestones of approvals
 
         emit currentTermsApproved(_bidder);
     }
+
+	function startFlow(ISuperToken token, address receiver, uint256 _streamAmountOwner, uint _endTime) private {
+	
+		uint256 flowRate = calculateFlowRate(_streamAmountOwner, _endTime);
+
+		//	ICFA.createFlow(
+		//      token,
+		//      receiver,
+		//      flowRate,
+		//      "0x"
+		//  );
+
+	}
+
+	function calculateFlowRate(uint256 _streamAmountOwner, uint256 _endTime) private view returns (uint256) {
+		uint256 _totalSeconds = calculateTotalSeconds(_endTime);
+		uint256 _flowRate = _streamAmountOwner.div( _totalSeconds);
+		return _flowRate;
+	}
+	
+	function calculateTotalSeconds(uint256 _endTime) private view returns (uint256) {
+		uint256 totalSeconds = _endTime.sub(block.timestamp);
+		return totalSeconds;
+	}
 
     //CT functions, loop through length of milestones//
     function setPositions(
@@ -175,19 +214,23 @@ contract BidTracker {
     }
 
     // //winning bidder can propose new bid terms 
-    // function adjustBidTerms(uint256[] memory _speedtargets, uint256[] memory _bounties) public {
+    // function adjustBidTerms(uint256[] memory _bountySpeedTargets, uint256[] memory _bounties, uint256 streamSpeedTarget, uint256 _streamAmountTotal) public {
     //     require(ownerApproval == true, "a bid has not been approved yet");
     //     require(msg.sender == winningBidder, "only approved bidder can submit new terms");
     //     BidderToBounties[msg.sender] = _bounties;
     //     BidderToTargets[msg.sender] = _speedtargets;
+    //	   BidderToStreamSpeed[msg.sender] = _streamSpeedTarget;
+    //	   BidderToStreamAmount[msg.sender] = _streamAmountTotal;
     // }
 
     // //owner needs to approve new terms
     // function approveNewTerms() public {
     //     require(ownerApproval == true, "a bid has not been approved yet");
     //     require(msg.sender == owner, "only owner can approve new terms");
-    //     targetbountyOwner = BidderToBounties[msg.sender];
-    //     speedtargetOwner = BidderToTargets[msg.sender];
+    //     targetBountyOwner = BidderToBounties[winningBidder];
+    //     bountySpeedTargetOwner = BidderToTargets[winningBidder];
+    //     speedTargetOwner = BidderToStreamSpeed[winningBidder];
+    //     streamAmountOwner = BidderToStreamAmount[winningBidder];
     //     //this has to somehow affect stream? start and cancel again here? 
     // }
 
@@ -198,11 +241,13 @@ contract BidTracker {
         external
         view
         returns (
-            uint256[] memory _speedtargets,
-            uint256[] memory _bounties
+            uint256[] memory _bountySpeedTargets,
+            uint256[] memory _bounties,
+	    uint256 _streamSpeedTarget,
+	    uint256 _streamAmountTotal
         )
     {
-        return (speedtargetOwner, targetbountyOwner);
+        return (bountySpeedTargetOwner, targetBountyOwner, speedTargetOwner, streamAmountOwner);
     }
 
     //loads all bidders addresses in an array
@@ -214,12 +259,12 @@ contract BidTracker {
     function loadBidderTerms(address _bidder)
         external
         view
-        returns (uint256[] memory _speedtargets, uint256[] memory _bounties)
+        returns (uint256[] memory _bountySpeedtargets, uint256[] memory _bounties, uint256 _streamSpeedTarget, uint256 _streamAmountTotal)
     {
         require(
             msg.sender == owner,
             "Only project owner can see proposed terms"
         );
-        return (BidderToTargets[_bidder], BidderToBounties[_bidder]);
+        return (BidderToTargets[_bidder], BidderToBounties[_bidder], BidderToStreamSpeed[_bidder], BidderToStreamAmount[_bidder]);
     }
 }
