@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 interface IConditionalTokens {
-    // how do we flexibly set outcomes? 
+    // how do we flexibly set outcomes?
     // getConditionId
     // prepareCondition
     // getCollectionId
@@ -24,7 +24,9 @@ interface IConditionalTokens {
 }
 
 //to fill in
-interface ISablier {}
+interface IConstantFlowAgreementV1 {
+
+}
 
 contract BidTracker {
     
@@ -34,9 +36,10 @@ contract BidTracker {
     uint16 public basePrice; //needs to be added to constructor
     string public projectName; //probably could be stored as bytes?
     address public owner;
-    address private oracleAddress; 
+    address private oracleAddress;
     address public winningBidder; //this only needs to be stored if we have post bid edits
     address[] public all_bidders; //should be able to replace this with event
+    
     uint256[] public bountySpeedTargetOwner; //wonder if string would be cheaper, also if timeline is neccessary
     uint256[] public targetBountyOwner; 
     uint256 public speedTargetOwner;
@@ -47,6 +50,11 @@ contract BidTracker {
     IConstantFlowAgreementV1 private ICFA;
 
     event currentTermsApproved(address approvedBidder);
+    event newBidSent(
+        address Bidder,
+        uint256[] speedtargetBidder,
+        uint256[] targetbountyBidder
+    );
 
     //these need to be private
     mapping(address => uint256[]) private BidderToTargets;
@@ -87,12 +95,12 @@ contract BidTracker {
             "another proposal has already been accepted"
         );
         require(msg.sender != owner, "owner cannot create a bid");
-        
         BidderToTargets[msg.sender] = _bountySpeedTargets;
         BidderToBounties[msg.sender] = _bounties;
 	BidderToStreamSpeed[msg.sender] = _streamSpeedTarget;
 	BidderToStreamAmount[msg.sender] = _streamAmountTotal;
         all_bidders.push(msg.sender);
+        emit newBidSent(msg.sender, _speedtargets, _bounties);
     }
 
     //called by owner approval submit
@@ -118,11 +126,13 @@ contract BidTracker {
 	speedTargetOwner = BidderToStreamSpeed[_bidder];
 	streamAmountOwner = BidderToStreamAmount[_bidder];
 
-        //kick off sablier stream 
+        //kick off sablier stream
 
 	startFlow(token, receiver, streamAmountOwner, endTime);
 	
 	//kick off CT setting loop, though this is going to be like 4 * # milestones of approvals
+        //emit newStream()
+        //emit CTidandoutcomes() maybe some function that rounds down on report. Need chainlink to resolve this in the future.
 
         emit currentTermsApproved(_bidder);
     }
@@ -152,16 +162,14 @@ contract BidTracker {
 	}
 
     //CT functions, loop through length of milestones//
-    function setPositions(
-
-    ) external {
-    // getConditionId
-    // prepareCondition
-    // getCollectionId
-    // getPositionId
-    // return all the gets? 
+    function setPositions() external {
+        // getConditionId
+        // prepareCondition
+        // getCollectionId
+        // getPositionId
+        // return all the gets?
     }
-    
+
     function callSplitPosition(
         address tokenaddress,
         bytes32 parent,
@@ -169,13 +177,7 @@ contract BidTracker {
         uint256[] calldata partition,
         uint256 value //bytes32 approvalPositionId,
     ) external {
-        ICT.splitPosition(
-            tokenaddress,
-            parent,
-            conditionId,
-            partition,
-            value
-        );
+        ICT.splitPosition(tokenaddress, parent, conditionId, partition, value);
         //totalValue = totalValue.sub(value); figure out how this is being called (i.e. how is money getting to this contract in the first place)
     }
 
@@ -227,6 +229,7 @@ contract BidTracker {
     // function approveNewTerms() public {
     //     require(ownerApproval == true, "a bid has not been approved yet");
     //     require(msg.sender == owner, "only owner can approve new terms");
+
     //     targetBountyOwner = BidderToBounties[winningBidder];
     //     bountySpeedTargetOwner = BidderToTargets[winningBidder];
     //     speedTargetOwner = BidderToStreamSpeed[winningBidder];
