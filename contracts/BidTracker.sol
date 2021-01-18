@@ -29,9 +29,8 @@ interface IConstantFlowAgreementV1 {
 }
 
 contract BidTracker {
-    
     using SafeMath for uint256;
-	
+
     bool public ownerApproval = false;
     uint16 public basePrice; //needs to be added to constructor
     string public projectName; //probably could be stored as bytes?
@@ -39,9 +38,9 @@ contract BidTracker {
     address private oracleAddress;
     address public winningBidder; //this only needs to be stored if we have post bid edits
     address[] public all_bidders; //should be able to replace this with event
-    
+
     uint256[] public bountySpeedTargetOwner; //wonder if string would be cheaper, also if timeline is neccessary
-    uint256[] public targetBountyOwner; 
+    uint256[] public targetBountyOwner;
     uint256 public speedTargetOwner;
     uint256 public streamAmountOwner;
 
@@ -69,15 +68,15 @@ contract BidTracker {
         string memory _name,
         uint256[] memory _bountySpeedTargets,
         uint256[] memory _bounties,
-	uint256 _streamSpeedTarget,
-	uint256 _streamAmountTotal
+        uint256 _streamSpeedTarget,
+        uint256 _streamAmountTotal
     ) public {
         owner = _owner;
         projectName = _name;
         bountySpeedTargetOwner = _bountySpeedTargets;
         targetBountyOwner = _bounties;
-	speedTargetOwner = _streamSpeedTarget;	
-	streamAmountOwner = _streamAmountTotal;
+        speedTargetOwner = _streamSpeedTarget;
+        streamAmountOwner = _streamAmountTotal;
         ICFA = IConstantFlowAgreementV1(_Superfluid);
         IERC1155C = IERC1155(_ConditionalToken);
         ICT = IConditionalTokens(_ConditionalToken);
@@ -87,8 +86,8 @@ contract BidTracker {
     function newBidderTerms(
         uint256[] calldata _bountySpeedTargets,
         uint256[] calldata _bounties,
-	uint256 _streamSpeedTarget,
-	uint256 _streamAmountTotal
+        uint256 _streamSpeedTarget,
+        uint256 _streamAmountTotal
     ) external {
         require(
             ownerApproval == false,
@@ -97,8 +96,8 @@ contract BidTracker {
         require(msg.sender != owner, "owner cannot create a bid");
         BidderToTargets[msg.sender] = _bountySpeedTargets;
         BidderToBounties[msg.sender] = _bounties;
-	BidderToStreamSpeed[msg.sender] = _streamSpeedTarget;
-	BidderToStreamAmount[msg.sender] = _streamAmountTotal;
+        BidderToStreamSpeed[msg.sender] = _streamSpeedTarget;
+        BidderToStreamAmount[msg.sender] = _streamAmountTotal;
         all_bidders.push(msg.sender);
         emit newBidSent(msg.sender, _speedtargets, _bounties);
     }
@@ -106,14 +105,13 @@ contract BidTracker {
     //called by owner approval submit
     function approveBidderTerms(
         address _bidder,
-  	// ISuperToken token,
-	// address receiver,
-	// uint256 endTime,
-	// address _CTaddress,
-   	// address _ERC20address,
-        // address auditor,
-	// uint startdate,
-	// uint
+        ISuperToken token,
+        address receiver,
+        uint256 endTime,
+        address _CTaddress,
+        address _ERC20address,
+        address auditor,
+        uint256 startdate
     ) external {
         require(msg.sender == owner, "Only project owner can approve terms");
         require(ownerApproval == false, "A bid has already been approved");
@@ -123,43 +121,54 @@ contract BidTracker {
         //adjust owner terms to be same as bidder terms
         targetBountyOwner = BidderToBounties[_bidder];
         bountySpeedTargetOwner = BidderToTargets[_bidder];
-	speedTargetOwner = BidderToStreamSpeed[_bidder];
-	streamAmountOwner = BidderToStreamAmount[_bidder];
+        speedTargetOwner = BidderToStreamSpeed[_bidder];
+        streamAmountOwner = BidderToStreamAmount[_bidder];
 
         //kick off sablier stream
 
-	startFlow(token, receiver, streamAmountOwner, endTime);
-	
-	//kick off CT setting loop, though this is going to be like 4 * # milestones of approvals
+        startFlow(token, receiver, streamAmountOwner, endTime);
+
+        //kick off CT setting loop, though this is going to be like 4 * # milestones of approvals
         //emit newStream()
         //emit CTidandoutcomes() maybe some function that rounds down on report. Need chainlink to resolve this in the future.
 
         emit currentTermsApproved(_bidder);
     }
 
-	function startFlow(ISuperToken token, address receiver, uint256 _streamAmountOwner, uint _endTime) private {
-	
-		uint256 flowRate = calculateFlowRate(_streamAmountOwner, _endTime);
+    function startFlow(
+        ISuperToken token,
+        address receiver,
+        uint256 _streamAmountOwner,
+        uint256 _endTime
+    ) private {
+        uint256 flowRate = calculateFlowRate(_streamAmountOwner, _endTime);
 
-		//	ICFA.createFlow(
-		//      token,
-		//      receiver,
-		//      flowRate,
-		//      "0x"
-		//  );
+        //	ICFA.createFlow(
+        //      token,
+        //      receiver,
+        //      flowRate,
+        //      "0x"
+        //  );
+    }
 
-	}
+    function calculateFlowRate(uint256 _streamAmountOwner, uint256 _endTime)
+        private
+        view
+        returns (uint256)
+    {
+        uint256 _totalSeconds = calculateTotalSeconds(_endTime);
+        uint256 _flowRate = _streamAmountOwner.div(_totalSeconds);
+        return _flowRate;
+    }
 
-	function calculateFlowRate(uint256 _streamAmountOwner, uint256 _endTime) private view returns (uint256) {
-		uint256 _totalSeconds = calculateTotalSeconds(_endTime);
-		uint256 _flowRate = _streamAmountOwner.div( _totalSeconds);
-		return _flowRate;
-	}
-	
-	function calculateTotalSeconds(uint256 _endTime) private view returns (uint256) {
-		uint256 totalSeconds = _endTime.sub(block.timestamp);
-		return totalSeconds;
-	}
+    function calculateTotalSeconds(uint256 _endTime)
+        private
+        view
+        returns (uint256)
+    {
+        uint256 totalSeconds = _endTime.sub(block.timestamp);
+        return totalSeconds;
+    }
 
     //CT functions, loop through length of milestones//
     function setPositions() external {
@@ -215,7 +224,7 @@ contract BidTracker {
         //still need to do this
     }
 
-    // //winning bidder can propose new bid terms 
+    // //winning bidder can propose new bid terms
     // function adjustBidTerms(uint256[] memory _bountySpeedTargets, uint256[] memory _bounties, uint256 streamSpeedTarget, uint256 _streamAmountTotal) public {
     //     require(ownerApproval == true, "a bid has not been approved yet");
     //     require(msg.sender == winningBidder, "only approved bidder can submit new terms");
@@ -234,7 +243,7 @@ contract BidTracker {
     //     bountySpeedTargetOwner = BidderToTargets[winningBidder];
     //     speedTargetOwner = BidderToStreamSpeed[winningBidder];
     //     streamAmountOwner = BidderToStreamAmount[winningBidder];
-    //     //this has to somehow affect stream? start and cancel again here? 
+    //     //this has to somehow affect stream? start and cancel again here?
     // }
 
     //////Below are all external view functions
@@ -246,11 +255,16 @@ contract BidTracker {
         returns (
             uint256[] memory _bountySpeedTargets,
             uint256[] memory _bounties,
-	    uint256 _streamSpeedTarget,
-	    uint256 _streamAmountTotal
+            uint256 _streamSpeedTarget,
+            uint256 _streamAmountTotal
         )
     {
-        return (bountySpeedTargetOwner, targetBountyOwner, speedTargetOwner, streamAmountOwner);
+        return (
+            bountySpeedTargetOwner,
+            targetBountyOwner,
+            speedTargetOwner,
+            streamAmountOwner
+        );
     }
 
     //loads all bidders addresses in an array
@@ -262,12 +276,22 @@ contract BidTracker {
     function loadBidderTerms(address _bidder)
         external
         view
-        returns (uint256[] memory _bountySpeedtargets, uint256[] memory _bounties, uint256 _streamSpeedTarget, uint256 _streamAmountTotal)
+        returns (
+            uint256[] memory _bountySpeedtargets,
+            uint256[] memory _bounties,
+            uint256 _streamSpeedTarget,
+            uint256 _streamAmountTotal
+        )
     {
         require(
             msg.sender == owner,
             "Only project owner can see proposed terms"
         );
-        return (BidderToTargets[_bidder], BidderToBounties[_bidder], BidderToStreamSpeed[_bidder], BidderToStreamAmount[_bidder]);
+        return (
+            BidderToTargets[_bidder],
+            BidderToBounties[_bidder],
+            BidderToStreamSpeed[_bidder],
+            BidderToStreamAmount[_bidder]
+        );
     }
 }

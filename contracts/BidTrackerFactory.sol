@@ -7,14 +7,15 @@ contract BidTrackerFactory {
 
     mapping(string => uint256) public nameToProjectIndex;
     BidTracker[] public projects;
-    event NewProject( //remember you already set up theGraph for this
+    event NewProject(
+        //remember you already set up theGraph for this
         string name,
         address owner,
         address project,
         uint256[] bountySpeedTargets,
         uint256[] targetbounties,
-	uint256 streamSpeedTarget,
-	uint256 streamAmountTotal
+        uint256 streamSpeedTarget,
+        uint256 streamAmountTotal
     );
 
     function deployNewProject(
@@ -24,21 +25,22 @@ contract BidTrackerFactory {
         string memory _name,
         uint256[] memory _bountySpeedTargets,
         uint256[] memory _bounties,
-    	uint256 _streamSpeedTarget,
-	uint256 _streamAmountTotal
+        uint256 _streamSpeedTarget,
+        uint256 _streamAmountTotal
     ) public returns (address) {
         //need to check if name or symbol already exists
         require(nameToProjectIndex[_name] == 0, "Name has already been taken");
-        BidTracker newProject = new BidTracker(
-            _owner,
-            _ConditionalTokens,
-            _Sablier,
-            _name,
-            _bountySpeedTargets,
-            _bounties,
-	    _streamSpeedTarget,
-	    _streamAmountTotal
-        );
+        BidTracker newProject =
+            new BidTracker(
+                _owner,
+                _ConditionalTokens,
+                _Sablier,
+                _name,
+                _bountySpeedTargets,
+                _bounties,
+                _streamSpeedTarget,
+                _streamAmountTotal
+            );
         projects.push(newProject);
 
         nonce.increment(); //start at 1
@@ -50,9 +52,9 @@ contract BidTrackerFactory {
             _owner,
             address(newProject),
             _bountySpeedTargets,
-            _bounties
-	    _streamSpeedTarget,
-	    _streamAmountTotal
+            _bounties,
+            _streamSpeedTarget,
+            _streamAmountTotal
         );
         return address(newProject);
     }
@@ -62,9 +64,7 @@ contract BidTrackerFactory {
         view
         returns (address projectAddress, string memory name)
     {
-
-            BidTracker selectedProject
-         = projects[nameToProjectIndex[_name] - 1];
+        BidTracker selectedProject = projects[nameToProjectIndex[_name] - 1];
 
         return (address(selectedProject), selectedProject.projectName());
     }
