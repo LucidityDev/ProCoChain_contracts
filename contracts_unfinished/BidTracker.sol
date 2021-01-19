@@ -105,7 +105,7 @@ contract BidTracker {
     //called by owner approval submit
     function approveBidderTerms(
         address _bidder,
-        ISuperToken token,
+        //ISuperToken token,
         address receiver,
         uint256 endTime,
         address _CTaddress,
@@ -136,7 +136,7 @@ contract BidTracker {
     }
 
     function startFlow(
-        ISuperToken token,
+        //ISuperToken token,
         address receiver,
         uint256 _streamAmountOwner,
         uint256 _endTime

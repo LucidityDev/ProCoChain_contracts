@@ -17,7 +17,7 @@ task("accounts", "Prints the list of accounts", async () => {
 /**
  * @type import('hardhat/config').HardhatUserConfig
  */
-const defaultNetwork = "rinkeby";
+const defaultNetwork = "localhost";
 
 function mnemonic() {
   try {
@@ -95,7 +95,7 @@ module.exports = {
     artifacts: "./artifacts"
   },
   mocha: {
-    timeout: 20000
+    timeout: 100000
   }
 };
 
