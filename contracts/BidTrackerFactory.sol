@@ -13,7 +13,7 @@ contract BidTrackerFactory {
         address owner,
         address project,
         uint256[] bountySpeedTargets,
-        uint256[] targetbounties,
+        uint256[] targeBounties,
         uint256 streamSpeedTarget,
         uint256 streamAmountTotal
     );
