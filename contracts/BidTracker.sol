@@ -157,8 +157,12 @@ contract BidTracker {
         }
     }
 
-    function endFlow() public {
-        //ICFA.deleteFlow() //Nick fill in rest here please
+    function endFlow(
+    	ISuperToken token,
+	address sender,
+	address receiver
+    ) public {
+        ICFA.deleteFlow(token, sender, receiver, "0"); 
         resolveDeposit();
     }
 
@@ -170,12 +174,12 @@ contract BidTracker {
     ) private {
         uint256 flowRate = calculateFlowRate(_streamAmountOwner, _endTime);
 
-        //	ICFA.createFlow(
-        //      token,
-        //      receiver,
-        //      flowRate,
-        //      "0x"
-        //  );
+		ICFA.createFlow(
+       		token,
+              	receiver,
+                flowRate,
+                "0x"
+         	);
     }
 
     function calculateFlowRate(uint256 _streamAmountOwner, uint256 _endTime)
