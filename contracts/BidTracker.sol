@@ -2,6 +2,7 @@
 pragma solidity >=0.6.0 <0.7.0;
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 interface IConditionalTokens {
@@ -32,19 +33,19 @@ contract BidTracker {
     using SafeMath for uint256;
 
     bool public ownerApproval = false;
-    uint16 public basePrice; //needs to be added to constructor
-    string public projectName; //probably could be stored as bytes?
+    string public projectName;
     address public owner;
     address private oracleAddress;
-    address public winningBidder; //this only needs to be stored if we have post bid edits
-    address[] public all_bidders; //should be able to replace this with event
-
-    uint256[] public bountySpeedTargetOwner; //wonder if string would be cheaper, also if timeline is neccessary
+    address public winningBidder;
+    address[] public all_bidders; //should be able to replace this with event and theGraph
+    uint256[] public bountySpeedTargetOwner;
     uint256[] public targetBountyOwner;
     uint256 public speedTargetOwner;
     uint256 public streamAmountOwner;
+    uint256 private BidderEndtime;
 
     IERC1155 private IERC1155C;
+    IERC20 private IERC20C;
     IConditionalTokens private ICT;
     IConstantFlowAgreementV1 private ICFA;
 
@@ -65,6 +66,7 @@ contract BidTracker {
         address _owner,
         address _ConditionalToken,
         address _Superfluid,
+        address _ERC20,
         string memory _name,
         uint256[] memory _bountySpeedTargets,
         uint256[] memory _bounties,
@@ -79,6 +81,7 @@ contract BidTracker {
         streamAmountOwner = _streamAmountTotal;
         ICFA = IConstantFlowAgreementV1(_Superfluid);
         IERC1155C = IERC1155(_ConditionalToken);
+        IERC20C = IERC20(_ERC20);
         ICT = IConditionalTokens(_ConditionalToken);
     }
 
@@ -123,16 +126,40 @@ contract BidTracker {
         bountySpeedTargetOwner = BidderToTargets[_bidder];
         speedTargetOwner = BidderToStreamSpeed[_bidder];
         streamAmountOwner = BidderToStreamAmount[_bidder];
+        
+        BidderEndtime = endTime;
 
-        //kick off sablier stream
-
+        setDeposit();
         startFlow(token, receiver, streamAmountOwner, endTime);
 
         //kick off CT setting loop, though this is going to be like 4 * # milestones of approvals
         //emit newStream()
         //emit CTidandoutcomes() maybe some function that rounds down on report. Need chainlink to resolve this in the future.
-
         emit currentTermsApproved(_bidder);
+    }
+
+    function setDeposit() internal {
+        //must have approval first from owner address to this contract address
+        uint256 _value = streamAmountOwner.div(10); //10% of total stream amount is security deposit
+        IERC20C.transferFrom(owner, address(this), _value);
+    }
+
+    function resolveDeposit() internal {
+        if (block.timestamp >= BidderEndtime) {
+            //funds transfer to bidder
+            IERC20C.approve(winningBidder, streamAmountOwner.div(10)); 
+            IERC20C.transferFrom(address(this), winningBidder, streamAmountOwner.div(10));
+        }
+        else {
+            //funds transfer back to owner
+            IERC20C.approve(owner, streamAmountOwner.div(10));
+            IERC20C.transferFrom(address(this), owner, streamAmountOwner.div(10)); 
+        }
+    }
+
+    function endFlow() public {
+        //ICFA.deleteFlow() //Nick fill in rest here please
+        resolveDeposit();
     }
 
     function startFlow(
@@ -171,33 +198,27 @@ contract BidTracker {
     }
 
     //CT functions, loop through length of milestones//
-    function setPositions() external {
-        // getConditionId
-        // prepareCondition
-        // getCollectionId
-        // getPositionId
-        // return all the gets?
-    }
-
     function callSplitPosition(
         address tokenaddress,
         bytes32 parent,
         bytes32 conditionId,
         uint256[] calldata partition,
-        uint256 value //bytes32 approvalPositionId,
+        uint256 value, //bytes32 approvalPositionId,
+        uint256 rejectValue //bytes32 rejectionPositionId
     ) external {
         ICT.splitPosition(tokenaddress, parent, conditionId, partition, value);
-        //totalValue = totalValue.sub(value); figure out how this is being called (i.e. how is money getting to this contract in the first place)
+        //store value and rejectValue for use in transferCT function? if memory allows
     }
 
-    //transfer CT tokens to bidder wallet for a certain positionId. There should be a way to transfer CT to owner too.
-    function transferCTtoBidder(uint256 positionId) external payable {
+    //transfer CT tokens to bidder wallet for a certain positionId.
+    function transferCT(uint256 positionId) external payable {
         require(
-            msg.sender == winningBidder,
-            "only bidder can redeem conditional tokens"
+            msg.sender == winningBidder || msg.sender == owner,
+            "only winning bidder or owner can redeem conditional tokens"
         );
-        uint256 heldAmount = IERC1155C.balanceOf(address(this), positionId); //need to make it so only approve position id is transferrable
+        uint256 heldAmount = IERC1155C.balanceOf(address(this), positionId); 
 
+        //need to prevent bidder from taking both owner and bidder outcomes
         IERC1155C.safeTransferFrom(
             address(this),
             msg.sender,
@@ -207,7 +228,7 @@ contract BidTracker {
         );
     }
 
-    //reportPayouts() should call fetchOracle()
+    //reportPayouts() should call fetchOracle(). Or maybe oracle should handle these functions.
     function callReportPayouts(bytes32 questionID, uint256[] calldata outcome)
         external
     {
@@ -284,8 +305,8 @@ contract BidTracker {
         )
     {
         require(
-            msg.sender == owner,
-            "Only project owner can see proposed terms"
+            msg.sender == owner || ownerApproval==true, 
+            "Only project owner can see proposed terms if not approved yet"
         );
         return (
             BidderToTargets[_bidder],
