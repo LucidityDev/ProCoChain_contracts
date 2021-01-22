@@ -6,7 +6,7 @@
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@openzeppelin/contracts": "^3.3.0",
     "@openzeppelin/contracts-ethereum-package": "^3.0.0",
-    "@superfluid-finance/ethereum-contracts": "^0.1.2-preview-20201014-fix5",
+    "@superfluid-finance/ethereum-contracts": "^0.2.2",
     "@truffle/contract": "^4.3.1",
     "chai": "^4.2.0",
     "ethereum-waffle": "^3.2.1",

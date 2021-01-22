@@ -21,7 +21,8 @@ contract BidTrackerFactory {
     function deployNewProject(
         address _owner,
         address _ConditionalTokens,
-        address _Sablier,
+        address _Superfluid,
+        address _ERC20,
         string memory _name,
         uint256[] memory _bountySpeedTargets,
         uint256[] memory _bounties,
@@ -34,7 +35,8 @@ contract BidTrackerFactory {
             new BidTracker(
                 _owner,
                 _ConditionalTokens,
-                _Sablier,
+                _Superfluid,
+                _ERC20,
                 _name,
                 _bountySpeedTargets,
                 _bounties,
@@ -43,7 +45,7 @@ contract BidTrackerFactory {
             );
         projects.push(newProject);
 
-        nonce.increment(); //start at 1
+        nonce.increment(); //start at 1. Could replace this with theGraph instead
         nameToProjectIndex[_name] = nonce.current();
 
         //emit event
@@ -65,7 +67,6 @@ contract BidTrackerFactory {
         returns (address projectAddress, string memory name)
     {
         BidTracker selectedProject = projects[nameToProjectIndex[_name] - 1];
-
         return (address(selectedProject), selectedProject.projectName());
     }
 }
