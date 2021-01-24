@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity >=0.6.0 <0.7.0;
+pragma solidity >=0.6.0;
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import {
+    IConstantFlowAgreementV1
+} from "@superfluid-finance/ethereum-contracts/contracts/interfaces/agreements/IConstantFlowAgreementV1.sol";
+import {
+    ISuperToken
+} from "@superfluid-finance/ethereum-contracts/contracts/interfaces/superfluid/ISuperfluid.sol";
+
+//need to get superfluid ISuperToken and ICFA in here, update with context arg. Conditional tokens position ID should be saved. Then update the unit tests and we're fine.
 
 interface IConditionalTokens {
-    // how do we flexibly set outcomes?
-    // getConditionId
-    // prepareCondition
-    // getCollectionId
-    // getPositionId
-
     function splitPosition(
         address collateralToken,
         bytes32 parentCollectionId,
@@ -24,26 +26,31 @@ interface IConditionalTokens {
         external;
 }
 
-//to fill in
-interface IConstantFlowAgreementV1 {
-
-}
-
 contract BidTracker {
     using SafeMath for uint256;
 
+    //tracking variables
     bool public ownerApproval = false;
     string public projectName;
     address public owner;
-    address private oracleAddress;
+    address public oracleAddress;
     address public winningBidder;
     address[] public all_bidders; //should be able to replace this with event and theGraph
+
+    //bid options initialized by owner
     uint256[] public bountySpeedTargetOwner;
     uint256[] public targetBountyOwner;
     uint256 public speedTargetOwner;
     uint256 public streamAmountOwner;
     uint256 private BidderEndtime;
 
+    //bids need to be private
+    mapping(address => uint256[]) private BidderToTargets;
+    mapping(address => uint256[]) private BidderToBounties;
+    mapping(address => uint256) private BidderToStreamSpeed;
+    mapping(address => uint256) private BidderToStreamAmount;
+
+    //interfaces - is it better to store variable or create a new instance in each function call?
     IERC1155 private IERC1155C;
     IERC20 private IERC20C;
     IConditionalTokens private ICT;
@@ -52,15 +59,10 @@ contract BidTracker {
     event currentTermsApproved(address approvedBidder);
     event newBidSent(
         address Bidder,
-        uint256[] speedtargetBidder,
-        uint256[] targetbountyBidder
+        uint256 speedTargetBidder,
+        uint256[] bountySpeedTargets,
+        uint256[] bounties
     );
-
-    //these need to be private
-    mapping(address => uint256[]) private BidderToTargets;
-    mapping(address => uint256[]) private BidderToBounties;
-    mapping(address => uint256) private BidderToStreamSpeed;
-    mapping(address => uint256) private BidderToStreamAmount;
 
     constructor(
         address _owner,
@@ -80,6 +82,7 @@ contract BidTracker {
         speedTargetOwner = _streamSpeedTarget;
         streamAmountOwner = _streamAmountTotal;
         ICFA = IConstantFlowAgreementV1(_Superfluid);
+        //add ISuperToken here?
         IERC1155C = IERC1155(_ConditionalToken);
         IERC20C = IERC20(_ERC20);
         ICT = IConditionalTokens(_ConditionalToken);
@@ -102,7 +105,12 @@ contract BidTracker {
         BidderToStreamSpeed[msg.sender] = _streamSpeedTarget;
         BidderToStreamAmount[msg.sender] = _streamAmountTotal;
         all_bidders.push(msg.sender);
-        emit newBidSent(msg.sender, _speedtargets, _bounties);
+        emit newBidSent(
+            msg.sender,
+            _streamSpeedTarget,
+            _bountySpeedTargets,
+            _bounties
+        );
     }
 
     //called by owner approval submit
@@ -110,11 +118,7 @@ contract BidTracker {
         address _bidder,
         ISuperToken token,
         address receiver,
-        uint256 endTime,
-        address _CTaddress,
-        address _ERC20address,
-        address auditor,
-        uint256 startdate
+        uint256 endTime
     ) external {
         require(msg.sender == owner, "Only project owner can approve terms");
         require(ownerApproval == false, "A bid has already been approved");
@@ -126,13 +130,12 @@ contract BidTracker {
         bountySpeedTargetOwner = BidderToTargets[_bidder];
         speedTargetOwner = BidderToStreamSpeed[_bidder];
         streamAmountOwner = BidderToStreamAmount[_bidder];
-        
+
         BidderEndtime = endTime;
 
         setDeposit();
         startFlow(token, receiver, streamAmountOwner, endTime);
 
-        //kick off CT setting loop, though this is going to be like 4 * # milestones of approvals
         //emit newStream()
         //emit CTidandoutcomes() maybe some function that rounds down on report. Need chainlink to resolve this in the future.
         emit currentTermsApproved(_bidder);
@@ -147,13 +150,20 @@ contract BidTracker {
     function resolveDeposit() internal {
         if (block.timestamp >= BidderEndtime) {
             //funds transfer to bidder
-            IERC20C.approve(winningBidder, streamAmountOwner.div(10)); 
-            IERC20C.transferFrom(address(this), winningBidder, streamAmountOwner.div(10));
-        }
-        else {
+            IERC20C.approve(winningBidder, streamAmountOwner.div(10));
+            IERC20C.transferFrom(
+                address(this),
+                winningBidder,
+                streamAmountOwner.div(10)
+            );
+        } else {
             //funds transfer back to owner
             IERC20C.approve(owner, streamAmountOwner.div(10));
-            IERC20C.transferFrom(address(this), owner, streamAmountOwner.div(10)); 
+            IERC20C.transferFrom(
+                address(this),
+                owner,
+                streamAmountOwner.div(10)
+            );
         }
     }
 
@@ -220,7 +230,7 @@ contract BidTracker {
             msg.sender == winningBidder || msg.sender == owner,
             "only winning bidder or owner can redeem conditional tokens"
         );
-        uint256 heldAmount = IERC1155C.balanceOf(address(this), positionId); 
+        uint256 heldAmount = IERC1155C.balanceOf(address(this), positionId);
 
         //need to prevent bidder from taking both owner and bidder outcomes
         IERC1155C.safeTransferFrom(
@@ -248,28 +258,6 @@ contract BidTracker {
     function fetchOracleData(uint256 speedtarget) internal {
         //still need to do this
     }
-
-    // //winning bidder can propose new bid terms
-    // function adjustBidTerms(uint256[] memory _bountySpeedTargets, uint256[] memory _bounties, uint256 streamSpeedTarget, uint256 _streamAmountTotal) public {
-    //     require(ownerApproval == true, "a bid has not been approved yet");
-    //     require(msg.sender == winningBidder, "only approved bidder can submit new terms");
-    //     BidderToBounties[msg.sender] = _bounties;
-    //     BidderToTargets[msg.sender] = _speedtargets;
-    //	   BidderToStreamSpeed[msg.sender] = _streamSpeedTarget;
-    //	   BidderToStreamAmount[msg.sender] = _streamAmountTotal;
-    // }
-
-    // //owner needs to approve new terms
-    // function approveNewTerms() public {
-    //     require(ownerApproval == true, "a bid has not been approved yet");
-    //     require(msg.sender == owner, "only owner can approve new terms");
-
-    //     targetBountyOwner = BidderToBounties[winningBidder];
-    //     bountySpeedTargetOwner = BidderToTargets[winningBidder];
-    //     speedTargetOwner = BidderToStreamSpeed[winningBidder];
-    //     streamAmountOwner = BidderToStreamAmount[winningBidder];
-    //     //this has to somehow affect stream? start and cancel again here?
-    // }
 
     //////Below are all external view functions
 
@@ -309,7 +297,7 @@ contract BidTracker {
         )
     {
         require(
-            msg.sender == owner || ownerApproval==true, 
+            msg.sender == owner || ownerApproval == true,
             "Only project owner can see proposed terms if not approved yet"
         );
         return (
