@@ -187,9 +187,13 @@ contract BidTracker {
 		ICFA.createFlow(
        		token,
               	receiver,
-                flowRate,
+                cast(flowRate),
                 "0x"
          	);
+    }
+    
+    function cast(uint256 number) public pure returns(int96) {
+        return int96(number);
     }
 
     function calculateFlowRate(uint256 _streamAmountOwner, uint256 _endTime)

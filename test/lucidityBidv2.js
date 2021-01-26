@@ -1,14 +1,20 @@
 const { expect } = require("chai");
 const { abi: abiNeg } = require("../artifacts/contracts/BidTracker.sol/BidTracker.json");
 const { abi: abiSF } = require("../superfluidartifacts/Superfluid.json");
-const { abi: abiSFT } = require("../superfluidartifacts/SuperToken.json");
+const { abi: abiSFT } = require("../superfluidartifacts/ERC20WithTokenInfo.json");
 const { abi: abiSFCF } = require("../superfluidartifacts/ConstantFlowAgreementV1.json");
-
+const { abi: abiCT } = require("../artifacts/contracts/ConditionalToken.sol/ConditionalTokens.json");
+// const SuperfluidSDK = require("@superfluid-finance/js-sdk");
+// const keccak256 = require('keccak256')
+const fs = require("fs"); 
 const { ethers } = require("hardhat");
 
+function mnemonic() {
+  return fs.readFileSync("./test/mnemonic.txt").toString().trim();
+}
+
 describe("Internet Bid Lucidity Full Feature Test", function () {
-  let BidFactory, Dai, CT, SF, SFT, SFCF;
-  let streamId; //for sablier
+  let BidFactory, fDai, CT, SFCF;
   let owner, bidder, auditor;
   
   it("connect owner", async () => {
@@ -21,21 +27,49 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     owner = await owner.connect(provider);
     
     bidder = owner; //just to make things easier for test case. 
+
+    // //connect sf 
+    // const sf = new SuperfluidSDK.Framework({
+    //   version: "v1", // Protocol release version
+    //   web3Provider: provider, // your web3 provider
+    //   tokens: ["fDAI"]
+    // });
+
+    // await sf.initialize();
+    // const agg = await sf.getAgreementClass(keccak256("org.superfluid-finance.agreements.ConstantFlowAgreement.v1"))
+    // console.log(agg)
+
+    SF = new ethers.Contract(
+      "0xeD5B5b32110c3Ded02a07c8b8e97513FAfb883B6",
+      abiSF,
+      owner)
+    
+    CT = new ethers.Contract(
+      "0x36bede640D19981A82090519bC1626249984c908",
+      abiCT,
+      owner)
+
+    SFCF = new ethers.Contract(
+      "0xF4C5310E51F6079F601a5fb7120bC72a70b96e2A",
+      abiSFCF,
+      owner)
+
+    fDai = new ethers.Contract(
+      "0x745861AeD1EEe363b4AaA5F1994Be40b1e05Ff90",
+      abiSFT,
+      owner)    
+    
+    console.log(CT.functions)
+    console.log(SF.functions)
+    console.log(SFCF.functions)
+    console.log(fDai.functions)
+
+    const nowBalance = await fDai.connect(owner).balanceOf(owner.getAddress())
+    console.log("fDai balance: ", nowBalance.toString());
   });
 
-  it("deploy factory contracts", async function () {
-    
-    //(Step 2) deploying on rinkeby means that Dai and ConditionalToken contracts already exist - you just need to find their addresses and create contract instances from them like below:
-    //const lawProjectContract = new ethers.Contract(
-    // lawproject.projectAddress,
-    //   abiNeg,
-    //   owner
-    // );
-    
-    // CT = 
-    // Dai = 
-    
-
+  //Nick, make sure to deploy and test bid/approval/start of flow
+  xit("deploy factory contracts", async function () { 
     //(Step 3) deploy bid contract. you should be able to find the deployed contract address through etherscan. 
     const BidFactoryContract = await ethers.getContractFactory(
       "BidTrackerFactory"
@@ -45,7 +79,14 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     // (worry about this after you got your deploy to work, Step 4) Superfluid contract address and instance, where can you find its API so we can use it? 
   });
 
-  it("initiate project", async function () {
+  xit("initiate project", async function () {
+    //will need to create a contract instance here after deploying for first time
+    //BidFactory = new ethers.Contract(
+    //     "factoryAddress",
+    //     abiNeg,
+    //     owner
+    // )
+
     //create project to be bid on. Maybe endtime has to be in here too? instead of at approval. 
     //     address _owner,
     //     address _ConditionalTokens,
@@ -59,8 +100,8 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     await BidFactory.connect(owner).deployNewProject(
       owner.getAddress(),
       CT.address,
-      Dai.address,
-      Dai.address,
+      SFCF.address,
+      fDai.address,
       "Honduras Agriculture Project",
       [ethers.BigNumber.from("5"),ethers.BigNumber.from("7"),ethers.BigNumber.from("10")],
       [ethers.BigNumber.from("300"),ethers.BigNumber.from("500"),ethers.BigNumber.from("1000")],
@@ -90,7 +131,10 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     //need approval function call, and check if stream kickoff worked
   });
 
-  //add it for CT later
+  //view flows on https://app.superfluid.finance/dashboard, and create an it test to view flow
+  
+  ////Andrew will add these
+  //add CT functions
   //test CT and flow reading/withdrawal
   //test security deposit resolve
 
