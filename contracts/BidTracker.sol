@@ -11,8 +11,6 @@ import {
     ISuperToken
 } from "@superfluid-finance/ethereum-contracts/contracts/interfaces/superfluid/ISuperfluid.sol";
 
-//need to get superfluid ISuperToken and ICFA in here, update with context arg. Conditional tokens position ID should be saved. Then update the unit tests and we're fine.
-
 interface IConditionalTokens {
     function splitPosition(
         address collateralToken,
@@ -82,7 +80,6 @@ contract BidTracker {
         speedTargetOwner = _streamSpeedTarget;
         streamAmountOwner = _streamAmountTotal;
         ICFA = IConstantFlowAgreementV1(_Superfluid);
-        //add ISuperToken here?
         IERC1155C = IERC1155(_ConditionalToken);
         IERC20C = IERC20(_ERC20);
         ICT = IConditionalTokens(_ConditionalToken);
@@ -99,12 +96,13 @@ contract BidTracker {
             ownerApproval == false,
             "another proposal has already been accepted"
         );
-        require(msg.sender != owner, "owner cannot create a bid");
+        // require(msg.sender != owner, "owner cannot create a bid");
         BidderToTargets[msg.sender] = _bountySpeedTargets;
         BidderToBounties[msg.sender] = _bounties;
         BidderToStreamSpeed[msg.sender] = _streamSpeedTarget;
         BidderToStreamAmount[msg.sender] = _streamAmountTotal;
         all_bidders.push(msg.sender);
+
         emit newBidSent(
             msg.sender,
             _streamSpeedTarget,
@@ -117,7 +115,6 @@ contract BidTracker {
     function approveBidderTerms(
         address _bidder,
         ISuperToken token,
-        address receiver,
         uint256 endTime
     ) external {
         require(msg.sender == owner, "Only project owner can approve terms");
@@ -134,7 +131,7 @@ contract BidTracker {
         BidderEndtime = endTime;
 
         setDeposit();
-        startFlow(token, receiver, streamAmountOwner, endTime);
+        startFlow(token, _bidder, streamAmountOwner, endTime);
 
         //emit newStream()
         //emit CTidandoutcomes() maybe some function that rounds down on report. Need chainlink to resolve this in the future.
@@ -144,6 +141,11 @@ contract BidTracker {
     function setDeposit() internal {
         //must have approval first from owner address to this contract address
         uint256 _value = streamAmountOwner.div(10); //10% of total stream amount is security deposit
+        IERC20C.transferFrom(owner, address(this), _value);
+    }
+
+    function recieveERC20(uint256 _value) external {
+        //must have approval first from owner address to this contract address
         IERC20C.transferFrom(owner, address(this), _value);
     }
 
@@ -168,11 +170,11 @@ contract BidTracker {
     }
 
     function endFlow(
-    	ISuperToken token,
-	address sender,
-	address receiver
+        ISuperToken token,
+        address sender,
+        address receiver
     ) public {
-        ICFA.deleteFlow(token, sender, receiver, "0"); 
+        ICFA.deleteFlow(token, sender, receiver, "0");
         resolveDeposit();
     }
 
@@ -184,15 +186,10 @@ contract BidTracker {
     ) private {
         uint256 flowRate = calculateFlowRate(_streamAmountOwner, _endTime);
 
-		ICFA.createFlow(
-       		token,
-              	receiver,
-                cast(flowRate),
-                "0x"
-         	);
+        ICFA.createFlow(token, receiver, cast(flowRate), "0x");
     }
-    
-    function cast(uint256 number) public pure returns(int96) {
+
+    function cast(uint256 number) public pure returns (int96) {
         return int96(number);
     }
 
@@ -221,8 +218,7 @@ contract BidTracker {
         bytes32 parent,
         bytes32 conditionId,
         uint256[] calldata partition,
-        uint256 value, //bytes32 approvalPositionId,
-        uint256 rejectValue //bytes32 rejectionPositionId
+        uint256 value //bytes32 approvalPositionId,
     ) external {
         ICT.splitPosition(tokenaddress, parent, conditionId, partition, value);
         //store value and rejectValue for use in transferCT function? if memory allows
