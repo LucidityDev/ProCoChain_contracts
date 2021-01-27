@@ -150,7 +150,7 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     console.log(bidderterms); //will show up as null the first time
   });
 
-  it("approve", async function () {
+  xit("approve", async function () {
     BidFactory = new ethers.Contract(
       factory_address,
       abiNegF,
@@ -164,10 +164,15 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
         owner
       );
 
+      const overrides = {
+        gasLimit: ethers.BigNumber.from("10000000"),
+      };
+
     await lawProjectContract.connect(owner).approveBidderTerms(
       bidder.getAddress(),
-      fDai,
-      parseInt((new Date('Jan-29-2021 18:40:35').getTime() / 1000).toFixed(0)))
+      fDai.address,
+      parseInt((new Date('Jan-29-2021 18:40:35').getTime() / 1000).toFixed(0)),
+      overrides)
   });
   //view flows on https://app.superfluid.finance/dashboard, and create an it test to view flow
   
