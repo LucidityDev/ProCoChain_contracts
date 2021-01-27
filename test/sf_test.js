@@ -96,12 +96,17 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     //   parseInt((new Date('Jan-29-2021 18:40:35').getTime() / 1000).toFixed(0))
     // );
 
+    const overrides = {
+        gasLimit: ethers.BigNumber.from("100000000"),
+      };
+
     await SFCF.connect(owner).createFlow(
       fDai.address, //token
       CFTest.address, //reciever 
       ethers.BigNumber.from("2"),
-      "0x"
+      "0x",
+      overrides
     );
-    
+
     });
 });
