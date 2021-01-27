@@ -97,7 +97,7 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     // );
 
     const overrides = {
-        gasLimit: ethers.BigNumber.from("100000000"),
+        gasLimit: ethers.BigNumber.from("10000000"),
       };
 
     await SFCF.connect(owner).createFlow(
@@ -107,6 +107,5 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
       "0x",
       overrides
     );
-
     });
 });
