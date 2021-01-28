@@ -50,7 +50,7 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     
     // console.log(CT.functions)
     // console.log(SF.functions)
-    console.log(SFCF.functions)
+    // console.log(SFCF.functions)
     // console.log(fDai.functions)
 
     const nowBalance = await fDai.connect(owner).balanceOf(owner.getAddress())
@@ -61,19 +61,20 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     //   );
 
     // CFTest = await CFTestContract.connect(owner).deploy(
-    // "0xF4C5310E51F6079F601a5fb7120bC72a70b96e2A",
-    // "0x745861AeD1EEe363b4AaA5F1994Be40b1e05Ff90",
+    // "0xeD5B5b32110c3Ded02a07c8b8e97513FAfb883B6", //sf
+    // "0xF4C5310E51F6079F601a5fb7120bC72a70b96e2A", //CFAv1
+    // "0x745861AeD1EEe363b4AaA5F1994Be40b1e05Ff90", //fDai
     // ethers.BigNumber.from("200")
     // );
   });
 
   xit("run approval for transfer funds", async function () {
     CFTest = new ethers.Contract(
-        "0x343342BaCdA7c5AA82af83aa61d3aBe48083c5A4",
+        "0x2f3A34A784ee820D6b7d1811C1C502af97cd70d9",
         abiCFTest,
         owner
     )
-    
+    console.log(CFTest.functions);
     await fDai.connect(owner).approve(
         CFTest.address, 
         ethers.BigNumber.from("200") //deposit and some stream amount
@@ -81,31 +82,31 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     await CFTest.connect(owner).recieveERC20(ethers.BigNumber.from("200")) //this may fail the first time as the approval takes time to mine
   });
 
-  it("try cashflow", async function () {
-    CFTest = new ethers.Contract(
-        "0x343342BaCdA7c5AA82af83aa61d3aBe48083c5A4",
-        abiCFTest,
-        owner
-    )
-    console.log(CFTest.functions);
-    
-    // await CFTest.connect(owner).startFlow(
-    //   owner.getAddress(),
-    //   fDai.address,
-    //   ethers.BigNumber.from("200"),
-    //   parseInt((new Date('Jan-29-2021 18:40:35').getTime() / 1000).toFixed(0))
-    // );
+  xit("try cashflow", async function () {
+      CFTest = new ethers.Contract(
+          "0x343342BaCdA7c5AA82af83aa61d3aBe48083c5A4",
+          abiCFTest,
+          owner
+      )
+      // console.log(CFTest.functions);
+      
+      const overrides = {
+          gasLimit: ethers.BigNumber.from("10000000"),
+        };
 
-    const overrides = {
-        gasLimit: ethers.BigNumber.from("10000000"),
-      };
+      //function startFromHost(
+      //   address _ERC20,
+      //   address _receiever,
+      //   uint256 _streamAmountOwner,
+      //   uint256 _endTime
+      // ) 
 
-    await SFCF.connect(owner).createFlow(
-      fDai.address, //token
-      CFTest.address, //reciever 
-      ethers.BigNumber.from("2"),
-      "0x",
-      overrides
-    );
+      await CFTest.connect(owner).startFromHost(
+        fDai.address,
+        owner.getAddress(),
+        ethers.BigNumber.from("200"),
+        parseInt((new Date('Jan-29-2021 18:40:35').getTime() / 1000).toFixed(0)),
+        overrides
+      );
     });
 });

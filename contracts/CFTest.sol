@@ -7,7 +7,8 @@ import {
     IConstantFlowAgreementV1
 } from "@superfluid-finance/ethereum-contracts/contracts/interfaces/agreements/IConstantFlowAgreementV1.sol";
 import {
-    ISuperToken
+    ISuperToken,
+    ISuperfluid
 } from "@superfluid-finance/ethereum-contracts/contracts/interfaces/superfluid/ISuperfluid.sol";
 
 contract CFTest {
@@ -16,16 +17,19 @@ contract CFTest {
     uint256 public streamAmountOwner;
     address public owner;
     IERC20 private IERC20C;
+    ISuperfluid private SF;
     IConstantFlowAgreementV1 private ICFA;
 
     constructor(
         address _Superfluid,
+        address _ICFA,
         address _ERC20,
         uint256 _streamAmountTotal
     ) public {
         owner = msg.sender;
         streamAmountOwner = _streamAmountTotal;
-        ICFA = IConstantFlowAgreementV1(_Superfluid);
+        SF = ISuperfluid(_Superfluid);
+        ICFA = IConstantFlowAgreementV1(_ICFA);
         IERC20C = IERC20(_ERC20);
     }
 
@@ -34,7 +38,7 @@ contract CFTest {
         IERC20C.transferFrom(owner, address(this), _value);
     }
 
-     function startFlow(
+    function startFlow(
         ISuperToken token,
         address receiver,
         uint256 _streamAmountOwner,
@@ -65,5 +69,25 @@ contract CFTest {
     {
         uint256 totalSeconds = _endTime.sub(block.timestamp);
         return totalSeconds;
+    }
+
+    function startFromHost(
+        address _ERC20,
+        address _receiever,
+        uint256 _streamAmountOwner,
+        uint256 _endTime
+    ) external {
+        uint256 flowRate = calculateFlowRate(_streamAmountOwner, _endTime);
+        SF.callAgreement(
+            ICFA,
+            abi.encodeWithSelector(
+                ICFA.createFlow.selector,
+                _ERC20,
+                _receiever,
+                cast(flowRate),
+                new bytes(0) // placeholder
+            ),
+            "0x"
+        );
     }
 }
