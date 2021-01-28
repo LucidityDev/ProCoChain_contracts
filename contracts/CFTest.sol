@@ -38,15 +38,35 @@ contract CFTest {
         IERC20C.transferFrom(owner, address(this), _value);
     }
 
-    function startFlow(
-        ISuperToken token,
-        address receiver,
+    function startFromHost(
+        address _ERC20,
+        address _receiever,
         uint256 _streamAmountOwner,
         uint256 _endTime
     ) external {
         uint256 flowRate = calculateFlowRate(_streamAmountOwner, _endTime);
-        ICFA.createFlow(token, receiver, cast(flowRate), "0x");
+        SF.callAgreement(
+            ICFA,
+            abi.encodeWithSelector(
+                ICFA.createFlow.selector,
+                _ERC20,
+                _receiever,
+                cast(flowRate),
+                new bytes(0) // placeholder
+            ),
+            "0x"
+        );
     }
+
+    // function startFlow(
+    //     ISuperToken token,
+    //     address receiver,
+    //     uint256 _streamAmountOwner,
+    //     uint256 _endTime
+    // ) external {
+    //     uint256 flowRate = calculateFlowRate(_streamAmountOwner, _endTime);
+    //     ICFA.createFlow(token, receiver, cast(flowRate), "0x");
+    // }
 
     function cast(uint256 number) public pure returns (int96) {
         return int96(number);
@@ -69,25 +89,5 @@ contract CFTest {
     {
         uint256 totalSeconds = _endTime.sub(block.timestamp);
         return totalSeconds;
-    }
-
-    function startFromHost(
-        address _ERC20,
-        address _receiever,
-        uint256 _streamAmountOwner,
-        uint256 _endTime
-    ) external {
-        uint256 flowRate = calculateFlowRate(_streamAmountOwner, _endTime);
-        SF.callAgreement(
-            ICFA,
-            abi.encodeWithSelector(
-                ICFA.createFlow.selector,
-                _ERC20,
-                _receiever,
-                cast(flowRate),
-                new bytes(0) // placeholder
-            ),
-            "0x"
-        );
     }
 }
