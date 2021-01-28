@@ -56,7 +56,7 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     const nowBalance = await fDai.connect(owner).balanceOf(owner.getAddress())
     console.log("fDai balance: ", nowBalance.toString());
 
-    const newBalance = await fDai.connect(owner).balanceOf("0x482Cc18326aBe364DA1E149A2815Ad62dBCa61E8")
+    const newBalance = await fDai.connect(owner).balanceOf("0xc21D26c2037cAA8104EF0Ef2B42150E8468bC569")
     console.log("fDai balance contract: ", newBalance.toString());
 
     // const CFTestContract = await ethers.getContractFactory(
@@ -73,21 +73,21 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
 
   xit("run approval for transfer funds", async function () {
     CFTest = new ethers.Contract(
-        "0x482Cc18326aBe364DA1E149A2815Ad62dBCa61E8",
+        "0xc21D26c2037cAA8104EF0Ef2B42150E8468bC569",
         abiCFTest,
         owner
     )
     console.log(CFTest.functions);
-    await fDai.connect(owner).approve(
-        CFTest.address, 
-        ethers.BigNumber.from("38580246913580000") //deposit and some stream amount
-    );
-    // await CFTest.connect(owner).recieveERC20(ethers.BigNumber.from("38580246913580000")) //this may fail the first time as the approval takes time to mine
+    // await fDai.connect(owner).approve(
+    //     CFTest.address, 
+    //     ethers.BigNumber.from("38580246913580000") //deposit and some stream amount
+    // );
+    await CFTest.connect(owner).recieveERC20(ethers.BigNumber.from("38580246913580000")) //this may fail the first time as the approval takes time to mine
   });
 
   xit("try cashflow", async function () {
       CFTest = new ethers.Contract(
-          "0x482Cc18326aBe364DA1E149A2815Ad62dBCa61E8",
+          "0xc21D26c2037cAA8104EF0Ef2B42150E8468bC569",
           abiCFTest,
           owner
       )
@@ -97,20 +97,20 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
           gasLimit: ethers.BigNumber.from("10000000"),
         };
 
-      // await CFTest.connect(owner).startFromHost(
-      //   fDai.address,
-      //   owner.getAddress(),
-      //   ethers.BigNumber.from("200"),
-      //   parseInt((new Date('Jan-29-2021 18:40:35').getTime() / 1000).toFixed(0)),
-      //   overrides
-      // );
-
-      const transaction = await CFTest.connect(owner).startFromHostBasic(
+      const transaction = await CFTest.connect(owner).startFromHost(
         fDai.address,
-        owner.getAddress(), //send from contract to owner
-        ethers.BigNumber.from("38580246913580"),
+        owner.getAddress(),
+        ethers.BigNumber.from("38580246913580000"),
+        parseInt((new Date('Jan-30-2021 18:40:35').getTime() / 1000).toFixed(0)),
         overrides
       );
+
+      // const transaction = await CFTest.connect(owner).startFromHostBasic(
+      //   fDai.address,
+      //   owner.getAddress(), //send from contract to owner
+      //   ethers.BigNumber.from("38580246913580"),
+      //   overrides
+      // );
 
       console.log(transaction);
     });

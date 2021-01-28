@@ -10,9 +10,10 @@ import {
     ISuperToken,
     ISuperfluid
 } from "@superfluid-finance/ethereum-contracts/contracts/interfaces/superfluid/ISuperfluid.sol";
+import "./Int96SafeMath.sol";
 
 contract CFTest {
-    using SafeMath for uint256;
+    using Int96SafeMath for int96;
 
     uint256 public streamAmountOwner;
     address public owner;
@@ -41,40 +42,40 @@ contract CFTest {
     function startFromHost(
         address _ERC20,
         address _receiever,
-        uint256 _streamAmountOwner,
-        uint256 _endTime
+        int96 _streamAmountOwner,
+        int96 _endTime
     ) external {
-        uint256 flowRate = calculateFlowRate(_streamAmountOwner, _endTime);
+        int96 flowRate = calculateFlowRate(_streamAmountOwner, _endTime);
         SF.callAgreement(
             ICFA,
             abi.encodeWithSelector(
                 ICFA.createFlow.selector,
                 _ERC20,
                 _receiever,
-                cast(flowRate),
+                flowRate,
                 new bytes(0) // placeholder
             ),
             "0x"
         );
     }
 
-    function startFromHostBasic(
-        address _ERC20,
-        address _receiever,
-        int96 _flowRate
-    ) external {
-        SF.callAgreement(
-            ICFA,
-            abi.encodeWithSelector(
-                ICFA.createFlow.selector,
-                _ERC20,
-                _receiever,
-                "38580246913580", //HARDCODE THIS AND SEE IF IT WORKS. ,
-                new bytes(0) // placeholder
-            ),
-            "0x"
-        );
-    }
+    // function startFromHostBasic(
+    //     address _ERC20,
+    //     address _receiever,
+    //     int96 _flowRate
+    // ) external {
+    //     SF.callAgreement(
+    //         ICFA,
+    //         abi.encodeWithSelector(
+    //             ICFA.createFlow.selector,
+    //             _ERC20,
+    //             _receiever,
+    //             "38580246913580", //HARDCODE THIS AND SEE IF IT WORKS. ,
+    //             new bytes(0) // placeholder
+    //         ),
+    //         "0x"
+    //     );
+    // }
 
     // function startFlow(
     //     ISuperToken token,
@@ -86,26 +87,26 @@ contract CFTest {
     //     ICFA.createFlow(token, receiver, cast(flowRate), "0x");
     // }
 
-    function cast(uint256 number) public pure returns (int96) {
-        return int96(number);
-    }
-
-    function calculateFlowRate(uint256 _streamAmountOwner, uint256 _endTime)
+    function calculateFlowRate(int96 _streamAmountOwner, int96 _endTime)
         private
         view
-        returns (uint256)
+        returns (int96)
     {
-        uint256 _totalSeconds = calculateTotalSeconds(_endTime);
-        uint256 _flowRate = _streamAmountOwner.div(_totalSeconds);
+        int96 _totalSeconds = calculateTotalSeconds(_endTime);
+        int96 _flowRate = _streamAmountOwner.div(_totalSeconds);
         return _flowRate;
     }
 
-    function calculateTotalSeconds(uint256 _endTime)
+    function calculateTotalSeconds(int96 _endTime)
         private
         view
-        returns (uint256)
+        returns (int96)
     {
-        uint256 totalSeconds = _endTime.sub(block.timestamp);
+        int96 totalSeconds = _endTime.sub(cast(block.timestamp), "overflow");
         return totalSeconds;
+    }
+
+    function cast(uint256 number) public pure returns (int96) {
+        return int96(number);
     }
 }

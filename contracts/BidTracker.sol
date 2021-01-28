@@ -8,8 +8,9 @@ import {
     IConstantFlowAgreementV1
 } from "@superfluid-finance/ethereum-contracts/contracts/interfaces/agreements/IConstantFlowAgreementV1.sol";
 import {
-    ISuperToken
+    ISuperfluid
 } from "@superfluid-finance/ethereum-contracts/contracts/interfaces/superfluid/ISuperfluid.sol";
+import "./Int96SafeMath.sol";
 
 interface IConditionalTokens {
     function splitPosition(
@@ -25,6 +26,7 @@ interface IConditionalTokens {
 }
 
 contract BidTracker {
+    using Int96SafeMath for int96;
     using SafeMath for uint256;
 
     //tracking variables
@@ -40,7 +42,7 @@ contract BidTracker {
     uint256[] public targetBountyOwner;
     uint256 public speedTargetOwner;
     uint256 public streamAmountOwner;
-    uint256 private BidderEndtime;
+    int96 private BidderEndtime;
 
     //bids need to be private
     mapping(address => uint256[]) private BidderToTargets;
@@ -53,6 +55,7 @@ contract BidTracker {
     IERC20 private IERC20C;
     IConditionalTokens private ICT;
     IConstantFlowAgreementV1 private ICFA;
+    ISuperfluid private ISF;
 
     event currentTermsApproved(address approvedBidder);
     event newBidSent(
@@ -66,6 +69,7 @@ contract BidTracker {
         address _owner,
         address _ConditionalToken,
         address _Superfluid,
+        address _CFA,
         address _ERC20,
         string memory _name,
         uint256[] memory _bountySpeedTargets,
@@ -79,7 +83,8 @@ contract BidTracker {
         targetBountyOwner = _bounties;
         speedTargetOwner = _streamSpeedTarget;
         streamAmountOwner = _streamAmountTotal;
-        ICFA = IConstantFlowAgreementV1(_Superfluid);
+        ICFA = IConstantFlowAgreementV1(_CFA);
+        ISF = ISuperfluid(_Superfluid);
         IERC1155C = IERC1155(_ConditionalToken);
         IERC20C = IERC20(_ERC20);
         ICT = IConditionalTokens(_ConditionalToken);
@@ -114,8 +119,8 @@ contract BidTracker {
     //called by owner approval submit
     function approveBidderTerms(
         address _bidder,
-        ISuperToken token,
-        uint256 endTime
+        address token,
+        int96 endTime
     ) external {
         require(msg.sender == owner, "Only project owner can approve terms");
         require(ownerApproval == false, "A bid has already been approved");
@@ -131,7 +136,7 @@ contract BidTracker {
         BidderEndtime = endTime;
 
         setDeposit();
-        startFlow(token, _bidder, streamAmountOwner, endTime);
+        startFlow(token, _bidder, cast(streamAmountOwner), endTime);
 
         //emit newStream()
         //emit CTidandoutcomes() maybe some function that rounds down on report. Need chainlink to resolve this in the future.
@@ -150,7 +155,7 @@ contract BidTracker {
     }
 
     function resolveDeposit() internal {
-        if (block.timestamp >= BidderEndtime) {
+        if (cast(block.timestamp) >= BidderEndtime) {
             //funds transfer to bidder
             IERC20C.approve(winningBidder, streamAmountOwner.div(10));
             IERC20C.transferFrom(
@@ -170,45 +175,64 @@ contract BidTracker {
     }
 
     function endFlow(
-        ISuperToken token,
+        address token,
         address sender,
         address receiver
     ) public {
-        ICFA.deleteFlow(token, sender, receiver, "0");
+        ISF.callAgreement(
+            ICFA,
+            abi.encodeWithSelector(
+                ICFA.deleteFlow.selector,
+                token,
+                msg.sender,
+                receiver,
+                new bytes(0) // placeholder
+            ),
+            "0x"
+        );
         resolveDeposit();
     }
 
     function startFlow(
-        ISuperToken token,
-        address receiver,
-        uint256 _streamAmountOwner,
-        uint256 _endTime
+        address _ERC20,
+        address _receiever,
+        int96 _streamAmountOwner,
+        int96 _endTime
     ) private {
-        uint256 flowRate = calculateFlowRate(_streamAmountOwner, _endTime);
-
-        ICFA.createFlow(token, receiver, cast(flowRate), "0x");
+        int96 flowRate = calculateFlowRate(_streamAmountOwner, _endTime);
+        ISF.callAgreement(
+            ICFA,
+            abi.encodeWithSelector(
+                ICFA.createFlow.selector,
+                _ERC20,
+                _receiever,
+                flowRate,
+                new bytes(0) // placeholder
+            ),
+            "0x"
+        );
     }
 
     function cast(uint256 number) public pure returns (int96) {
         return int96(number);
     }
 
-    function calculateFlowRate(uint256 _streamAmountOwner, uint256 _endTime)
+    function calculateFlowRate(int96 _streamAmountOwner, int96 _endTime)
         private
         view
-        returns (uint256)
+        returns (int96)
     {
-        uint256 _totalSeconds = calculateTotalSeconds(_endTime);
-        uint256 _flowRate = _streamAmountOwner.div(_totalSeconds);
+        int96 _totalSeconds = calculateTotalSeconds(_endTime);
+        int96 _flowRate = _streamAmountOwner.div(_totalSeconds);
         return _flowRate;
     }
 
-    function calculateTotalSeconds(uint256 _endTime)
+    function calculateTotalSeconds(int96 _endTime)
         private
         view
-        returns (uint256)
+        returns (int96)
     {
-        uint256 totalSeconds = _endTime.sub(block.timestamp);
+        int96 totalSeconds = _endTime.sub(cast(block.timestamp), "time error");
         return totalSeconds;
     }
 
