@@ -58,6 +58,24 @@ contract CFTest {
         );
     }
 
+    function startFromHostBasic(
+        address _ERC20,
+        address _receiever,
+        int96 _flowRate
+    ) external {
+        SF.callAgreement(
+            ICFA,
+            abi.encodeWithSelector(
+                ICFA.createFlow.selector,
+                _ERC20,
+                _receiever,
+                "38580246913580", //HARDCODE THIS AND SEE IF IT WORKS. ,
+                new bytes(0) // placeholder
+            ),
+            "0x"
+        );
+    }
+
     // function startFlow(
     //     ISuperToken token,
     //     address receiver,
