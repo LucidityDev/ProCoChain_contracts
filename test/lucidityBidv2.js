@@ -15,7 +15,7 @@ function mnemonic() {
 }
 
 describe("Internet Bid Lucidity Full Feature Test", function () {
-  let BidFactory, fDai, CT, SFCF;
+  let BidFactory, fDai, CT, SF, SFCF;
   let factory_address;
   let owner, bidder, auditor;
   
@@ -58,12 +58,13 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     const nowBalance = await fDai.connect(owner).balanceOf(owner.getAddress())
     console.log("fDai balance: ", nowBalance.toString());
 
-    factory_address="0x13e5Cc4beAF377BcC4318A6AB3698CE846f4FA85"
+    const newBalance = await fDai.connect(owner).balanceOf("0xD1c6Ac58495EDE8A6B0142623F427A9a8eb821A1")
+    console.log("fDai balance contract: ", newBalance.toString());
+
+    factory_address="0x4D04c46325CBd5D0160bbf74E65103b3b8709d7B"
   });
 
-  //Nick, make sure to deploy and test bid/approval/start of flow
   xit("deploy factory contracts", async function () { 
-    //(Step 3) deploy bid contract. you should be able to find the deployed contract address through etherscan. 
     const BidFactoryContract = await ethers.getContractFactory(
       "BidTrackerFactory"
     );
@@ -77,26 +78,17 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
         owner
     )
 
-    //create project to be bid on. Maybe endtime has to be in here too? instead of at approval. 
-    //     address _owner,
-    //     address _ConditionalTokens,
-    //     address _SuperfluidICFA,
-    //     address _ERC20,
-    //     string memory _name,
-    //     uint256[] memory _bountySpeedTargets,
-    //     uint256[] memory _bounties,
-    //     uint256 _streamSpeedTarget,
-    //     uint256 _streamAmountTotal
     await BidFactory.connect(owner).deployNewProject(
       owner.getAddress(),
       CT.address,
       SFCF.address,
+      SF.address,
       fDai.address,
       "EEEE ABNAEL MACHADO DE LIMA - CENE",
       [ethers.BigNumber.from("5"),ethers.BigNumber.from("7"),ethers.BigNumber.from("10")],
       [ethers.BigNumber.from("300"),ethers.BigNumber.from("500"),ethers.BigNumber.from("1000")],
       ethers.BigNumber.from("3"),
-      ethers.BigNumber.from("500")
+      ethers.BigNumber.from("3858024691358")
     );
   });
 
@@ -111,16 +103,16 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     console.log(lawproject)
 
     const lawProjectContract = new ethers.Contract(
-      lawproject.projectAddress, //'0xD2820666665C127852213554E2B1cfA8A8199Ef8',
+      lawproject.projectAddress, //''0xD1c6Ac58495EDE8A6B0142623F427A9a8eb821A1',
         abiNeg,
         owner
       );
 
-    await fDai.connect(owner).approve(
-      lawProjectContract.address, 
-      ethers.BigNumber.from("200") //deposit and some stream amount
-    );
-    await lawProjectContract.connect(owner).recieveERC20(ethers.BigNumber.from("100"))
+    // await fDai.connect(owner).approve(
+    //   lawProjectContract.address, 
+    //   ethers.BigNumber.from("38580246913580000") //deposit and some stream amount
+    // );
+    await lawProjectContract.connect(owner).recieveERC20(ethers.BigNumber.from("38580246913580000"))
   });
 
   xit("bid", async function () {
@@ -138,12 +130,12 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
       );
     //console.log(lawProjectContract.functions)
 
-    // await lawProjectContract.connect(bidder).newBidderTerms(
-    //     [ethers.BigNumber.from("4"),ethers.BigNumber.from("6"),ethers.BigNumber.from("9")],
-    //     [ethers.BigNumber.from("400"),ethers.BigNumber.from("600"),ethers.BigNumber.from("900")],
-    //     ethers.BigNumber.from("3"),
-    //     ethers.BigNumber.from("500")
-    //     )
+    await lawProjectContract.connect(bidder).newBidderTerms(
+        [ethers.BigNumber.from("4"),ethers.BigNumber.from("6"),ethers.BigNumber.from("9")],
+        [ethers.BigNumber.from("400"),ethers.BigNumber.from("600"),ethers.BigNumber.from("900")],
+        ethers.BigNumber.from("3"),
+        ethers.BigNumber.from("3858024691358") //stream rate
+        )
 
     const bidderterms = await lawProjectContract.connect(owner).loadBidderTerms(bidder.getAddress())
     console.log("new bid from bidder address: ", await bidder.getAddress());
@@ -171,12 +163,11 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     await lawProjectContract.connect(owner).approveBidderTerms(
       bidder.getAddress(),
       fDai.address,
-      parseInt((new Date('Jan-29-2021 18:40:35').getTime() / 1000).toFixed(0)),
+      // parseInt((new Date('Jan-29-2021 18:40:35').getTime() / 1000).toFixed(0)),
       overrides)
   });
   //view flows on https://app.superfluid.finance/dashboard, and create an it test to view flow
   
-  ////Andrew will add these
   //add CT functions
   
   xit("run through Gnosis conditional token and audit report as oracle", async function () {

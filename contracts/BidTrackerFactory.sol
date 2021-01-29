@@ -15,7 +15,7 @@ contract BidTrackerFactory {
         uint256[] bountySpeedTargets,
         uint256[] targeBounties,
         uint256 streamSpeedTarget,
-        uint256 streamAmountTotal
+        int96 streamRate
     );
 
     function deployNewProject(
@@ -28,7 +28,7 @@ contract BidTrackerFactory {
         uint256[] memory _bountySpeedTargets,
         uint256[] memory _bounties,
         uint256 _streamSpeedTarget,
-        uint256 _streamAmountTotal
+        int96 _streamRate
     ) public returns (address) {
         //need to check if name or symbol already exists
         require(nameToProjectIndex[_name] == 0, "Name has already been taken");
@@ -43,7 +43,7 @@ contract BidTrackerFactory {
                 _bountySpeedTargets,
                 _bounties,
                 _streamSpeedTarget,
-                _streamAmountTotal
+                _streamRate
             );
         projects.push(newProject);
 
@@ -58,7 +58,7 @@ contract BidTrackerFactory {
             _bountySpeedTargets,
             _bounties,
             _streamSpeedTarget,
-            _streamAmountTotal
+            _streamRate
         );
         return address(newProject);
     }

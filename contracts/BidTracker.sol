@@ -41,14 +41,15 @@ contract BidTracker {
     uint256[] public bountySpeedTargetOwner;
     uint256[] public targetBountyOwner;
     uint256 public speedTargetOwner;
-    uint256 public streamAmountOwner;
+    uint256 public securityDeposit = 1000;
+    int96 public streamRateOwner;
     int96 private BidderEndtime;
 
     //bids need to be private
     mapping(address => uint256[]) private BidderToTargets;
     mapping(address => uint256[]) private BidderToBounties;
-    mapping(address => uint256) private BidderToStreamSpeed;
-    mapping(address => uint256) private BidderToStreamAmount;
+    mapping(address => uint256) private BidderToStreamSpeed; //speed of wifi
+    mapping(address => int96) private BidderToStreamRate; //rate of payment
 
     //interfaces - is it better to store variable or create a new instance in each function call?
     IERC1155 private IERC1155C;
@@ -75,14 +76,14 @@ contract BidTracker {
         uint256[] memory _bountySpeedTargets,
         uint256[] memory _bounties,
         uint256 _streamSpeedTarget,
-        uint256 _streamAmountTotal
+        int96 _streamRate
     ) public {
         owner = _owner;
         projectName = _name;
         bountySpeedTargetOwner = _bountySpeedTargets;
         targetBountyOwner = _bounties;
         speedTargetOwner = _streamSpeedTarget;
-        streamAmountOwner = _streamAmountTotal;
+        streamRateOwner = _streamRate;
         ICFA = IConstantFlowAgreementV1(_CFA);
         ISF = ISuperfluid(_Superfluid);
         IERC1155C = IERC1155(_ConditionalToken);
@@ -95,7 +96,7 @@ contract BidTracker {
         uint256[] calldata _bountySpeedTargets,
         uint256[] calldata _bounties,
         uint256 _streamSpeedTarget,
-        uint256 _streamAmountTotal
+        int96 _streamRate
     ) external {
         require(
             ownerApproval == false,
@@ -105,7 +106,7 @@ contract BidTracker {
         BidderToTargets[msg.sender] = _bountySpeedTargets;
         BidderToBounties[msg.sender] = _bounties;
         BidderToStreamSpeed[msg.sender] = _streamSpeedTarget;
-        BidderToStreamAmount[msg.sender] = _streamAmountTotal;
+        BidderToStreamRate[msg.sender] = _streamRate;
         all_bidders.push(msg.sender);
 
         emit newBidSent(
@@ -117,11 +118,10 @@ contract BidTracker {
     }
 
     //called by owner approval submit
-    function approveBidderTerms(
-        address _bidder,
-        address token,
-        int96 endTime
-    ) external {
+    function approveBidderTerms(address _bidder, address token)
+        external
+    // int96 endTime
+    {
         require(msg.sender == owner, "Only project owner can approve terms");
         require(ownerApproval == false, "A bid has already been approved");
         ownerApproval = true;
@@ -131,12 +131,12 @@ contract BidTracker {
         targetBountyOwner = BidderToBounties[_bidder];
         bountySpeedTargetOwner = BidderToTargets[_bidder];
         speedTargetOwner = BidderToStreamSpeed[_bidder];
-        streamAmountOwner = BidderToStreamAmount[_bidder];
+        streamRateOwner = BidderToStreamRate[_bidder];
 
-        BidderEndtime = endTime;
+        // BidderEndtime = endTime;
 
-        setDeposit();
-        startFlow(token, _bidder, cast(streamAmountOwner), endTime);
+        //setDeposit();
+        startFlow(token, _bidder, streamRateOwner);
 
         //emit newStream()
         //emit CTidandoutcomes() maybe some function that rounds down on report. Need chainlink to resolve this in the future.
@@ -145,8 +145,8 @@ contract BidTracker {
 
     function setDeposit() internal {
         //must have approval first from owner address to this contract address
-        uint256 _value = streamAmountOwner.div(10); //10% of total stream amount is security deposit
-        IERC20C.transferFrom(owner, address(this), _value);
+        IERC20C.approve(owner, securityDeposit);
+        IERC20C.transferFrom(owner, address(this), securityDeposit);
     }
 
     function recieveERC20(uint256 _value) external {
@@ -157,28 +157,16 @@ contract BidTracker {
     function resolveDeposit() internal {
         if (cast(block.timestamp) >= BidderEndtime) {
             //funds transfer to bidder
-            IERC20C.approve(winningBidder, streamAmountOwner.div(10));
-            IERC20C.transferFrom(
-                address(this),
-                winningBidder,
-                streamAmountOwner.div(10)
-            );
+            IERC20C.approve(winningBidder, securityDeposit);
+            IERC20C.transferFrom(address(this), winningBidder, securityDeposit);
         } else {
             //funds transfer back to owner
-            IERC20C.approve(owner, streamAmountOwner.div(10));
-            IERC20C.transferFrom(
-                address(this),
-                owner,
-                streamAmountOwner.div(10)
-            );
+            IERC20C.approve(owner, securityDeposit);
+            IERC20C.transferFrom(address(this), owner, securityDeposit);
         }
     }
 
-    function endFlow(
-        address token,
-        address sender,
-        address receiver
-    ) public {
+    function endFlow(address token, address receiver) public {
         ISF.callAgreement(
             ICFA,
             abi.encodeWithSelector(
@@ -196,17 +184,16 @@ contract BidTracker {
     function startFlow(
         address _ERC20,
         address _receiever,
-        int96 _streamAmountOwner,
-        int96 _endTime
+        int96 _streamRate // int96 _endTime
     ) private {
-        int96 flowRate = calculateFlowRate(_streamAmountOwner, _endTime);
+        // int96 flowRate = calculateFlowRate(_streamAmountOwner, _endTime);
         ISF.callAgreement(
             ICFA,
             abi.encodeWithSelector(
                 ICFA.createFlow.selector,
                 _ERC20,
                 _receiever,
-                flowRate,
+                _streamRate,
                 new bytes(0) // placeholder
             ),
             "0x"
@@ -217,24 +204,24 @@ contract BidTracker {
         return int96(number);
     }
 
-    function calculateFlowRate(int96 _streamAmountOwner, int96 _endTime)
-        private
-        view
-        returns (int96)
-    {
-        int96 _totalSeconds = calculateTotalSeconds(_endTime);
-        int96 _flowRate = _streamAmountOwner.div(_totalSeconds);
-        return _flowRate;
-    }
+    // function calculateFlowRate(int96 _streamAmountOwner, int96 _endTime)
+    //     private
+    //     view
+    //     returns (int96)
+    // {
+    //     int96 _totalSeconds = calculateTotalSeconds(_endTime);
+    //     int96 _flowRate = _streamAmountOwner.div(_totalSeconds);
+    //     return _flowRate;
+    // }
 
-    function calculateTotalSeconds(int96 _endTime)
-        private
-        view
-        returns (int96)
-    {
-        int96 totalSeconds = _endTime.sub(cast(block.timestamp), "time error");
-        return totalSeconds;
-    }
+    // function calculateTotalSeconds(int96 _endTime)
+    //     private
+    //     view
+    //     returns (int96)
+    // {
+    //     int96 totalSeconds = _endTime.sub(cast(block.timestamp), "time error");
+    //     return totalSeconds;
+    // }
 
     //CT functions, loop through length of milestones//
     function callSplitPosition(
@@ -293,14 +280,14 @@ contract BidTracker {
             uint256[] memory _bountySpeedTargets,
             uint256[] memory _bounties,
             uint256 _streamSpeedTarget,
-            uint256 _streamAmountTotal
+            int96 _streamAmountTotal
         )
     {
         return (
             bountySpeedTargetOwner,
             targetBountyOwner,
             speedTargetOwner,
-            streamAmountOwner
+            streamRateOwner
         );
     }
 
@@ -317,7 +304,7 @@ contract BidTracker {
             uint256[] memory _bountySpeedtargets,
             uint256[] memory _bounties,
             uint256 _streamSpeedTarget,
-            uint256 _streamAmountTotal
+            int96 _streamAmountTotal
         )
     {
         require(
@@ -328,7 +315,7 @@ contract BidTracker {
             BidderToTargets[_bidder],
             BidderToBounties[_bidder],
             BidderToStreamSpeed[_bidder],
-            BidderToStreamAmount[_bidder]
+            BidderToStreamRate[_bidder]
         );
     }
 }

@@ -100,7 +100,7 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
       const transaction = await CFTest.connect(owner).startFromHost(
         fDai.address,
         owner.getAddress(),
-        ethers.BigNumber.from("38580246913580000"),
+        ethers.BigNumber.from("38580246913580"),
         parseInt((new Date('Jan-30-2021 18:40:35').getTime() / 1000).toFixed(0)),
         overrides
       );
