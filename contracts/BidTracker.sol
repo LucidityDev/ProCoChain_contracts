@@ -31,6 +31,7 @@ contract BidTracker {
 
     //tracking variables
     bool public ownerApproval = false;
+    bool public noncompliant = false;
     string public projectName;
     address public owner;
     address public oracleAddress;
@@ -40,15 +41,14 @@ contract BidTracker {
     //bid options initialized by owner
     uint256[] public bountySpeedTargetOwner;
     uint256[] public targetBountyOwner;
-    uint256 public speedTargetOwner;
-    uint256 public securityDeposit = 1000;
+    uint256 public wifiSpeedOwner;
+    uint256 public securityDeposit = 1000000000000000; //can be changed in the future
     int96 public streamRateOwner;
-    int96 private BidderEndtime;
 
     //bids need to be private
     mapping(address => uint256[]) private BidderToTargets;
     mapping(address => uint256[]) private BidderToBounties;
-    mapping(address => uint256) private BidderToStreamSpeed; //speed of wifi
+    mapping(address => uint256) private BidderToWifiSpeed; //speed of wifi
     mapping(address => int96) private BidderToStreamRate; //rate of payment
 
     //interfaces - is it better to store variable or create a new instance in each function call?
@@ -58,12 +58,21 @@ contract BidTracker {
     IConstantFlowAgreementV1 private ICFA;
     ISuperfluid private ISF;
 
-    event currentTermsApproved(address approvedBidder);
+    event currentTermsApproved(
+        address approvedBidder,
+        uint256 finalWifiSpeed,
+        int96 finalStreamRate,
+        uint256[] finalTargetSpeeds,
+        uint256[] finalBounties,
+        uint256 createdAt
+    );
     event newBidSent(
         address Bidder,
-        uint256 speedTargetBidder,
+        int96 streamRateBidder,
+        uint256 wifiSpeedBidder,
         uint256[] bountySpeedTargets,
-        uint256[] bounties
+        uint256[] bounties,
+        uint256 createdAt
     );
 
     constructor(
@@ -75,14 +84,14 @@ contract BidTracker {
         string memory _name,
         uint256[] memory _bountySpeedTargets,
         uint256[] memory _bounties,
-        uint256 _streamSpeedTarget,
+        uint256 _wifiSpeedTarget,
         int96 _streamRate
     ) public {
         owner = _owner;
         projectName = _name;
         bountySpeedTargetOwner = _bountySpeedTargets;
         targetBountyOwner = _bounties;
-        speedTargetOwner = _streamSpeedTarget;
+        wifiSpeedOwner = _wifiSpeedTarget;
         streamRateOwner = _streamRate;
         ICFA = IConstantFlowAgreementV1(_CFA);
         ISF = ISuperfluid(_Superfluid);
@@ -91,11 +100,21 @@ contract BidTracker {
         ICT = IConditionalTokens(_ConditionalToken);
     }
 
-    //called by bidder submit
+    ////utils
+    function cast(uint256 number) public pure returns (int96) {
+        return int96(number);
+    }
+
+    function recieveERC20(uint256 _value) external {
+        //must have approval first from owner address to this contract address
+        IERC20C.transferFrom(owner, address(this), _value);
+    }
+
+    ///bidding and approvals
     function newBidderTerms(
         uint256[] calldata _bountySpeedTargets,
         uint256[] calldata _bounties,
-        uint256 _streamSpeedTarget,
+        uint256 _wifiSpeedTarget,
         int96 _streamRate
     ) external {
         require(
@@ -105,68 +124,40 @@ contract BidTracker {
         // require(msg.sender != owner, "owner cannot create a bid");
         BidderToTargets[msg.sender] = _bountySpeedTargets;
         BidderToBounties[msg.sender] = _bounties;
-        BidderToStreamSpeed[msg.sender] = _streamSpeedTarget;
+        BidderToWifiSpeed[msg.sender] = _wifiSpeedTarget;
         BidderToStreamRate[msg.sender] = _streamRate;
         all_bidders.push(msg.sender);
 
         emit newBidSent(
             msg.sender,
-            _streamSpeedTarget,
+            _streamRate,
+            _wifiSpeedTarget,
             _bountySpeedTargets,
-            _bounties
+            _bounties,
+            block.timestamp
         );
     }
 
-    //called by owner approval submit
-    function approveBidderTerms(address _bidder, address token)
-        external
-    // int96 endTime
-    {
+    function approveBidderTerms(address _bidder, address token) external {
         require(msg.sender == owner, "Only project owner can approve terms");
         require(ownerApproval == false, "A bid has already been approved");
         ownerApproval = true;
         winningBidder = _bidder;
 
-        //adjust owner terms to be same as bidder terms
-        targetBountyOwner = BidderToBounties[_bidder];
-        bountySpeedTargetOwner = BidderToTargets[_bidder];
-        speedTargetOwner = BidderToStreamSpeed[_bidder];
-        streamRateOwner = BidderToStreamRate[_bidder];
-
-        // BidderEndtime = endTime;
-
-        //setDeposit();
+        setDeposit();
         startFlow(token, _bidder, streamRateOwner);
-
-        //emit newStream()
-        //emit CTidandoutcomes() maybe some function that rounds down on report. Need chainlink to resolve this in the future.
-        emit currentTermsApproved(_bidder);
-    }
-
-    function setDeposit() internal {
-        //must have approval first from owner address to this contract address
-        IERC20C.approve(owner, securityDeposit);
-        IERC20C.transferFrom(owner, address(this), securityDeposit);
-    }
-
-    function recieveERC20(uint256 _value) external {
-        //must have approval first from owner address to this contract address
-        IERC20C.transferFrom(owner, address(this), _value);
-    }
-
-    function resolveDeposit() internal {
-        if (cast(block.timestamp) >= BidderEndtime) {
-            //funds transfer to bidder
-            IERC20C.approve(winningBidder, securityDeposit);
-            IERC20C.transferFrom(address(this), winningBidder, securityDeposit);
-        } else {
-            //funds transfer back to owner
-            IERC20C.approve(owner, securityDeposit);
-            IERC20C.transferFrom(address(this), owner, securityDeposit);
-        }
+        emit currentTermsApproved(
+            _bidder,
+            BidderToWifiSpeed[_bidder],
+            BidderToStreamRate[_bidder],
+            BidderToTargets[_bidder],
+            BidderToBounties[_bidder],
+            block.timestamp
+        );
     }
 
     function endFlow(address token, address receiver) public {
+        require(msg.sender == owner, "Only owner can cancel flow");
         ISF.callAgreement(
             ICFA,
             abi.encodeWithSelector(
@@ -200,28 +191,41 @@ contract BidTracker {
         );
     }
 
-    function cast(uint256 number) public pure returns (int96) {
-        return int96(number);
+    //security deposit
+    function setDeposit() internal {
+        //must have approval first from owner address to this contract address
+        IERC20C.transferFrom(owner, address(this), securityDeposit);
     }
 
-    // function calculateFlowRate(int96 _streamAmountOwner, int96 _endTime)
-    //     private
-    //     view
-    //     returns (int96)
-    // {
-    //     int96 _totalSeconds = calculateTotalSeconds(_endTime);
-    //     int96 _flowRate = _streamAmountOwner.div(_totalSeconds);
-    //     return _flowRate;
-    // }
+    function resolveDeposit() internal {
+        if (noncompliant == true) {
+            //funds transfer to bidder
+            IERC20C.approve(winningBidder, securityDeposit);
+            IERC20C.transferFrom(address(this), winningBidder, securityDeposit);
+        } else {
+            //funds transfer back to owner
+            IERC20C.approve(owner, securityDeposit);
+            IERC20C.transferFrom(address(this), owner, securityDeposit);
+        }
+    }
 
-    // function calculateTotalSeconds(int96 _endTime)
-    //     private
-    //     view
-    //     returns (int96)
-    // {
-    //     int96 totalSeconds = _endTime.sub(cast(block.timestamp), "time error");
-    //     return totalSeconds;
-    // }
+    //reportPayouts() should call fetchOracle(). Or maybe oracle should handle these functions.
+    function callReportPayouts(bytes32 questionID, uint256[] calldata outcome)
+        external
+    {
+        require(msg.sender == owner, "not owner"); //later this should only be called from governance contract with a vote
+        ICT.reportPayouts(questionID, outcome);
+    }
+
+    function updateOracle(address newOracleAddress) external {
+        require(msg.sender == owner, "Only owner can update oracle");
+        oracleAddress = newOracleAddress;
+        noncompliant = false; //replace with fetchOracleData() later
+    }
+
+    function fetchOracleData(uint256 jobID) internal {
+        //still need to do this. Returns weekly average speed.
+    }
 
     //CT functions, loop through length of milestones//
     function callSplitPosition(
@@ -242,7 +246,6 @@ contract BidTracker {
             "only winning bidder or owner can redeem conditional tokens"
         );
         uint256 heldAmount = IERC1155C.balanceOf(address(this), positionId);
-
         //need to prevent bidder from taking both owner and bidder outcomes
         IERC1155C.safeTransferFrom(
             address(this),
@@ -253,47 +256,24 @@ contract BidTracker {
         );
     }
 
-    //reportPayouts() should call fetchOracle(). Or maybe oracle should handle these functions.
-    function callReportPayouts(bytes32 questionID, uint256[] calldata outcome)
-        external
-    {
-        require(msg.sender == owner, "not owner"); //later this should only be called from governance contract with a vote
-        ICT.reportPayouts(questionID, outcome);
-    }
-
-    function updateOracle(address newOracleAddress) external {
-        require(msg.sender == owner, "Only owner can update oracle");
-        oracleAddress = newOracleAddress;
-    }
-
-    function fetchOracleData(uint256 speedtarget) internal {
-        //still need to do this
-    }
-
-    //////Below are all external view functions
-
-    //loads owner terms for bidder to see
+    //////External view functions. May be unneccesary due to theGraph.
+    //loads owner terms for bidder to see.
     function loadOwnerTerms()
         external
         view
         returns (
             uint256[] memory _bountySpeedTargets,
             uint256[] memory _bounties,
-            uint256 _streamSpeedTarget,
+            uint256 _wifiSpeedTarget,
             int96 _streamAmountTotal
         )
     {
         return (
             bountySpeedTargetOwner,
             targetBountyOwner,
-            speedTargetOwner,
+            wifiSpeedOwner,
             streamRateOwner
         );
-    }
-
-    //loads all bidders addresses in an array
-    function getAllBidderAddresses() external view returns (address[] memory) {
-        return (all_bidders);
     }
 
     //loads bidder terms for owner to see
@@ -303,7 +283,7 @@ contract BidTracker {
         returns (
             uint256[] memory _bountySpeedtargets,
             uint256[] memory _bounties,
-            uint256 _streamSpeedTarget,
+            uint256 _wifiSpeedTarget,
             int96 _streamAmountTotal
         )
     {
@@ -314,7 +294,7 @@ contract BidTracker {
         return (
             BidderToTargets[_bidder],
             BidderToBounties[_bidder],
-            BidderToStreamSpeed[_bidder],
+            BidderToWifiSpeed[_bidder],
             BidderToStreamRate[_bidder]
         );
     }

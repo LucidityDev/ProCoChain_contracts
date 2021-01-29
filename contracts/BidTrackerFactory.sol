@@ -14,8 +14,9 @@ contract BidTrackerFactory {
         address project,
         uint256[] bountySpeedTargets,
         uint256[] targeBounties,
-        uint256 streamSpeedTarget,
-        int96 streamRate
+        uint256 wifiSpeedTarget,
+        int96 streamRate,
+        uint256 createdAt
     );
 
     function deployNewProject(
@@ -27,7 +28,7 @@ contract BidTrackerFactory {
         string memory _name,
         uint256[] memory _bountySpeedTargets,
         uint256[] memory _bounties,
-        uint256 _streamSpeedTarget,
+        uint256 _wifiSpeedTarget,
         int96 _streamRate
     ) public returns (address) {
         //need to check if name or symbol already exists
@@ -42,7 +43,7 @@ contract BidTrackerFactory {
                 _name,
                 _bountySpeedTargets,
                 _bounties,
-                _streamSpeedTarget,
+                _wifiSpeedTarget,
                 _streamRate
             );
         projects.push(newProject);
@@ -57,8 +58,9 @@ contract BidTrackerFactory {
             address(newProject),
             _bountySpeedTargets,
             _bounties,
-            _streamSpeedTarget,
-            _streamRate
+            _wifiSpeedTarget,
+            _streamRate,
+            block.timestamp
         );
         return address(newProject);
     }

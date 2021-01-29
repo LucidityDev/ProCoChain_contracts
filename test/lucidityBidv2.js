@@ -58,10 +58,10 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     const nowBalance = await fDai.connect(owner).balanceOf(owner.getAddress())
     console.log("fDai balance: ", nowBalance.toString());
 
-    const newBalance = await fDai.connect(owner).balanceOf("0xD1c6Ac58495EDE8A6B0142623F427A9a8eb821A1")
+    const newBalance = await fDai.connect(owner).balanceOf("0x6074f121C4B63DA49A5ECC7D9B608331C21e6Fbc")
     console.log("fDai balance contract: ", newBalance.toString());
 
-    factory_address="0x4D04c46325CBd5D0160bbf74E65103b3b8709d7B"
+    factory_address="0xDE7D9461b1B6695b8363d512c8b0FfB2A6D1D106"
   });
 
   xit("deploy factory contracts", async function () { 
@@ -71,7 +71,7 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     BidFactory = await BidFactoryContract.connect(owner).deploy();
   });
 
-  xit("initiate project", async function () {
+  it("initiate project", async function () {
     BidFactory = new ethers.Contract(
         factory_address,
         abiNegF,
@@ -81,10 +81,10 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     await BidFactory.connect(owner).deployNewProject(
       owner.getAddress(),
       CT.address,
-      SFCF.address,
       SF.address,
+      SFCF.address,
       fDai.address,
-      "EEEE ABNAEL MACHADO DE LIMA - CENE",
+      "EEEF HELIO NEVES BOTELHO",
       [ethers.BigNumber.from("5"),ethers.BigNumber.from("7"),ethers.BigNumber.from("10")],
       [ethers.BigNumber.from("300"),ethers.BigNumber.from("500"),ethers.BigNumber.from("1000")],
       ethers.BigNumber.from("3"),
@@ -103,15 +103,20 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     console.log(lawproject)
 
     const lawProjectContract = new ethers.Contract(
-      lawproject.projectAddress, //''0xD1c6Ac58495EDE8A6B0142623F427A9a8eb821A1',
+      lawproject.projectAddress, //''0x6074f121C4B63DA49A5ECC7D9B608331C21e6Fbc',
         abiNeg,
         owner
       );
 
-    // await fDai.connect(owner).approve(
-    //   lawProjectContract.address, 
-    //   ethers.BigNumber.from("38580246913580000") //deposit and some stream amount
-    // );
+    await fDai.connect(owner).approve(
+      lawProjectContract.address, 
+      ethers.BigNumber.from("38580246913580000") //stream amount
+    );
+
+    await fDai.connect(owner).approve(
+      lawProjectContract.address, 
+      ethers.BigNumber.from("1000000000000000") //deposit amount
+    );
     await lawProjectContract.connect(owner).recieveERC20(ethers.BigNumber.from("38580246913580000"))
   });
 
