@@ -42,7 +42,7 @@ contract BidTracker {
     uint256[] public bountySpeedTargetOwner;
     uint256[] public targetBountyOwner;
     uint256 public wifiSpeedOwner;
-    uint256 public securityDeposit = 1000000000000000; //can be changed in the future
+    uint256 public securityDeposit = 10000000000000; //can be changed in the future
     int96 public streamRateOwner;
 
     //bids need to be private
@@ -121,6 +121,10 @@ contract BidTracker {
             ownerApproval == false,
             "another proposal has already been accepted"
         );
+        require(
+            BidderToStreamRate[msg.sender] == 0,
+            "Bidder already submitted once"
+        );
         // require(msg.sender != owner, "owner cannot create a bid");
         BidderToTargets[msg.sender] = _bountySpeedTargets;
         BidderToBounties[msg.sender] = _bounties;
@@ -141,8 +145,6 @@ contract BidTracker {
     function approveBidderTerms(address _bidder, address token) external {
         require(msg.sender == owner, "Only project owner can approve terms");
         require(ownerApproval == false, "A bid has already been approved");
-        ownerApproval = true;
-        winningBidder = _bidder;
 
         setDeposit();
         startFlow(token, _bidder, streamRateOwner);
@@ -154,6 +156,9 @@ contract BidTracker {
             BidderToBounties[_bidder],
             block.timestamp
         );
+
+        ownerApproval = true;
+        winningBidder = _bidder;
     }
 
     function endFlow(address token, address receiver) public {

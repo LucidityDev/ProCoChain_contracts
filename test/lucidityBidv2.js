@@ -18,8 +18,13 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
   let BidFactory, fDai, CT, SF, SFCF;
   let factory_address;
   let owner, bidder, auditor;
-  
+  let overrides
+
   it("connect owner and set contracts", async () => {
+    overrides = {
+      gasLimit: ethers.BigNumber.from("10000000"),
+    };
+    
     provider = new ethers.providers.InfuraProvider("rinkeby", {
         projectId: "d635ea6eddda4720824cc8b24380e4a9",
         projectSecret: "b4ea2b15f0614105a64f0e8ba1f2bffa"
@@ -58,17 +63,19 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     const nowBalance = await fDai.connect(owner).balanceOf(owner.getAddress())
     console.log("fDai balance: ", nowBalance.toString());
 
-    const newBalance = await fDai.connect(owner).balanceOf("0x6074f121C4B63DA49A5ECC7D9B608331C21e6Fbc")
+    const newBalance = await fDai.connect(owner).balanceOf("0x4bb9706d4B44d139C75bA4D31c430D0a8E1116aB") //project address from later
     console.log("fDai balance contract: ", newBalance.toString());
 
-    factory_address="0xDE7D9461b1B6695b8363d512c8b0FfB2A6D1D106"
+    factory_address="0x7697aC32BD4cF0cAe881b93BFc8D168d5352741B"
+    project_name = "EEEFM GOV ARAUJO LIMA"
   });
 
   xit("deploy factory contracts", async function () { 
     const BidFactoryContract = await ethers.getContractFactory(
       "BidTrackerFactory"
     );
-    BidFactory = await BidFactoryContract.connect(owner).deploy();
+    BidFactory = await BidFactoryContract.connect(owner).deploy(overrides);
+    console.log(BidFactory.hash)
   });
 
   it("initiate project", async function () {
@@ -84,40 +91,12 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
       SF.address,
       SFCF.address,
       fDai.address,
-      "EEEF HELIO NEVES BOTELHO",
+      project_name,
       [ethers.BigNumber.from("5"),ethers.BigNumber.from("7"),ethers.BigNumber.from("10")],
       [ethers.BigNumber.from("300"),ethers.BigNumber.from("500"),ethers.BigNumber.from("1000")],
       ethers.BigNumber.from("3"),
       ethers.BigNumber.from("3858024691358")
     );
-  });
-
-  xit("set deposit and transfer funds", async function () {
-    BidFactory = new ethers.Contract(
-      factory_address,
-      abiNegF,
-      owner
-    )
-
-    const lawproject = await BidFactory.getProject("EEEE ABNAEL MACHADO DE LIMA - CENE");
-    console.log(lawproject)
-
-    const lawProjectContract = new ethers.Contract(
-      lawproject.projectAddress, //''0x6074f121C4B63DA49A5ECC7D9B608331C21e6Fbc',
-        abiNeg,
-        owner
-      );
-
-    await fDai.connect(owner).approve(
-      lawProjectContract.address, 
-      ethers.BigNumber.from("38580246913580000") //stream amount
-    );
-
-    await fDai.connect(owner).approve(
-      lawProjectContract.address, 
-      ethers.BigNumber.from("1000000000000000") //deposit amount
-    );
-    await lawProjectContract.connect(owner).recieveERC20(ethers.BigNumber.from("38580246913580000"))
   });
 
   xit("bid", async function () {
@@ -127,13 +106,15 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
       owner
     )
 
-    const lawproject = await BidFactory.getProject("EEEE ABNAEL MACHADO DE LIMA - CENE");
+    const lawproject = await BidFactory.getProject(project_name, overrides);
+    console.log(lawproject)
+
     const lawProjectContract = new ethers.Contract(
-      lawproject.projectAddress, 
+        lawproject.projectAddress, 
         abiNeg,
         owner
       );
-    //console.log(lawProjectContract.functions)
+    console.log(lawProjectContract.address)
 
     await lawProjectContract.connect(bidder).newBidderTerms(
         [ethers.BigNumber.from("4"),ethers.BigNumber.from("6"),ethers.BigNumber.from("9")],
@@ -145,31 +126,52 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     const bidderterms = await lawProjectContract.connect(owner).loadBidderTerms(bidder.getAddress())
     console.log("new bid from bidder address: ", await bidder.getAddress());
     console.log(bidderterms); //will show up as null the first time
+    // console.log("winning bidder: ", await lawProjectContract.connect(owner).winningBidder())
   });
 
-  xit("approve", async function () {
-    BidFactory = new ethers.Contract(
-      factory_address,
-      abiNegF,
-      owner
-    )
+  xit("set deposit and transfer some funds to contract", async function () {
+    // BidFactory = new ethers.Contract(
+    //   factory_address,
+    //   abiNegF,
+    //   owner
+    // )
 
-    const lawproject = await BidFactory.getProject("EEEE ABNAEL MACHADO DE LIMA - CENE");
+    // const lawproject = await BidFactory.connect(owner).getProject(project_name);
+
     const lawProjectContract = new ethers.Contract(
-      lawproject.projectAddress, 
+      "0x4bb9706d4B44d139C75bA4D31c430D0a8E1116aB", //lawproject.projectAddress, 
         abiNeg,
         owner
       );
 
-      const overrides = {
-        gasLimit: ethers.BigNumber.from("10000000"),
-      };
+    await fDai.connect(owner).approve(
+      lawProjectContract.address, 
+      ethers.BigNumber.from("43680246913580000") //stream amount + deposit amount. May have to approve twice for some reason?
+    );
 
-    await lawProjectContract.connect(owner).approveBidderTerms(
+    // await lawProjectContract.connect(owner).recieveERC20(ethers.BigNumber.from("38680246913580000"),overrides)
+  });
+
+  xit("approve", async function () {
+    // BidFactory = new ethers.Contract(
+    //   factory_address,
+    //   abiNegF,
+    //   owner
+    // )
+
+    // const lawproject = await BidFactory.getProject(project_name);
+    const lawProjectContract = new ethers.Contract(
+      "0x4bb9706d4B44d139C75bA4D31c430D0a8E1116aB", //lawproject.projectAddress, 
+        abiNeg,
+        owner
+      );
+
+    const approve = await lawProjectContract.connect(owner).approveBidderTerms(
       bidder.getAddress(),
       fDai.address,
       // parseInt((new Date('Jan-29-2021 18:40:35').getTime() / 1000).toFixed(0)),
       overrides)
+    console.log(approve)
   });
   //view flows on https://app.superfluid.finance/dashboard, and create an it test to view flow
   
@@ -183,7 +185,7 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
       owner
     )
 
-    const lawproject = await BidFactory.getProject("EEEE ABNAEL MACHADO DE LIMA - CENE");
+    const lawproject = await BidFactory.getProject(project_name);
     const lawProjectContract = new ethers.Contract(
       lawproject.projectAddress,
         abiNeg,
