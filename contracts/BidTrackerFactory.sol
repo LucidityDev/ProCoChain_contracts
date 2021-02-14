@@ -18,6 +18,19 @@ contract BidTrackerFactory {
         uint256 streamAmountTotal
     );
 
+    /**
+    	@notice Deploys a new project AKA an instance of the BidTracker.sol contract with the following parameters:
+       	@param _owner the ethereum address of the owner of a particular project
+       	@param _ConditionalTokens the ethereum address of the ConditionalTokens contract
+       	@param _Superfluid the ethereum address of the Superfluid contract which allows the starting and stopping of money streams
+       	@param _ERC20 the ethereum address for the ERC20 interface contract to be used as collateral for the conditional tokens
+       	@param _name The name of the project
+       	@param _bountySpeedTargets an array of the speed targets that have bounties
+       	@param _bounties an array with the bounties set for the _bountySpeedTargets array
+       	@param _streamSpeedTarget the target speed for the Internet Service Provider
+       	@param _streamAmountTotal the total amount of money to be streamed for the internet service
+    **/
+
     function deployNewProject(
         address _owner,
         address _ConditionalTokens,
