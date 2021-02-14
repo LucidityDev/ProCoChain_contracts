@@ -14,8 +14,9 @@ contract BidTrackerFactory {
         address project,
         uint256[] bountySpeedTargets,
         uint256[] targeBounties,
-        uint256 streamSpeedTarget,
-        uint256 streamAmountTotal
+        uint256 wifiSpeedTarget,
+        int96 streamRate,
+        uint256 createdAt
     );
 
     /**
@@ -35,12 +36,13 @@ contract BidTrackerFactory {
         address _owner,
         address _ConditionalTokens,
         address _Superfluid,
+        address _CFA,
         address _ERC20,
         string memory _name,
         uint256[] memory _bountySpeedTargets,
         uint256[] memory _bounties,
-        uint256 _streamSpeedTarget,
-        uint256 _streamAmountTotal
+        uint256 _wifiSpeedTarget,
+        int96 _streamRate
     ) public returns (address) {
         //need to check if name or symbol already exists
         require(nameToProjectIndex[_name] == 0, "Name has already been taken");
@@ -49,12 +51,13 @@ contract BidTrackerFactory {
                 _owner,
                 _ConditionalTokens,
                 _Superfluid,
+                _CFA,
                 _ERC20,
                 _name,
                 _bountySpeedTargets,
                 _bounties,
-                _streamSpeedTarget,
-                _streamAmountTotal
+                _wifiSpeedTarget,
+                _streamRate
             );
         projects.push(newProject);
 
@@ -68,8 +71,9 @@ contract BidTrackerFactory {
             address(newProject),
             _bountySpeedTargets,
             _bounties,
-            _streamSpeedTarget,
-            _streamAmountTotal
+            _wifiSpeedTarget,
+            _streamRate,
+            block.timestamp
         );
         return address(newProject);
     }

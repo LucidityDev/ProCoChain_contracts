@@ -44,7 +44,7 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
       owner)
 
     fDai = new ethers.Contract(
-      "0x745861AeD1EEe363b4AaA5F1994Be40b1e05Ff90",
+      "0x745861aed1eee363b4aaa5f1994be40b1e05ff90",
       abiSFT,
       owner)    
     
@@ -55,6 +55,9 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
 
     const nowBalance = await fDai.connect(owner).balanceOf(owner.getAddress())
     console.log("fDai balance: ", nowBalance.toString());
+
+    const newBalance = await fDai.connect(owner).balanceOf("0xc21D26c2037cAA8104EF0Ef2B42150E8468bC569")
+    console.log("fDai balance contract: ", newBalance.toString());
 
     // const CFTestContract = await ethers.getContractFactory(
     //     "CFTest"
@@ -70,21 +73,21 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
 
   xit("run approval for transfer funds", async function () {
     CFTest = new ethers.Contract(
-        "0x2f3A34A784ee820D6b7d1811C1C502af97cd70d9",
+        "0xc21D26c2037cAA8104EF0Ef2B42150E8468bC569",
         abiCFTest,
         owner
     )
     console.log(CFTest.functions);
-    await fDai.connect(owner).approve(
-        CFTest.address, 
-        ethers.BigNumber.from("200") //deposit and some stream amount
-    );
-    await CFTest.connect(owner).recieveERC20(ethers.BigNumber.from("200")) //this may fail the first time as the approval takes time to mine
+    // await fDai.connect(owner).approve(
+    //     CFTest.address, 
+    //     ethers.BigNumber.from("38580246913580000") //deposit and some stream amount
+    // );
+    await CFTest.connect(owner).recieveERC20(ethers.BigNumber.from("38580246913580000")) //this may fail the first time as the approval takes time to mine
   });
 
   xit("try cashflow", async function () {
       CFTest = new ethers.Contract(
-          "0x343342BaCdA7c5AA82af83aa61d3aBe48083c5A4",
+          "0xc21D26c2037cAA8104EF0Ef2B42150E8468bC569",
           abiCFTest,
           owner
       )
@@ -94,19 +97,21 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
           gasLimit: ethers.BigNumber.from("10000000"),
         };
 
-      //function startFromHost(
-      //   address _ERC20,
-      //   address _receiever,
-      //   uint256 _streamAmountOwner,
-      //   uint256 _endTime
-      // ) 
-
-      await CFTest.connect(owner).startFromHost(
+      const transaction = await CFTest.connect(owner).startFromHost(
         fDai.address,
         owner.getAddress(),
-        ethers.BigNumber.from("200"),
-        parseInt((new Date('Jan-29-2021 18:40:35').getTime() / 1000).toFixed(0)),
+        ethers.BigNumber.from("38580246913580"),
+        parseInt((new Date('Jan-30-2021 18:40:35').getTime() / 1000).toFixed(0)),
         overrides
       );
+
+      // const transaction = await CFTest.connect(owner).startFromHostBasic(
+      //   fDai.address,
+      //   owner.getAddress(), //send from contract to owner
+      //   ethers.BigNumber.from("38580246913580"),
+      //   overrides
+      // );
+
+      console.log(transaction);
     });
 });
