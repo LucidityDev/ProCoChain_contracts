@@ -2,30 +2,13 @@ require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-etherscan");
 const fs = require("fs");
 
-// This is a sample Hardhat task. To learn how to create your own go to
-// https://hardhat.org/guides/create-task.html
-task("accounts", "Prints the list of accounts", async () => {
-  const accounts = await ethers.getSigners();
-
-  for (const account of accounts) {
-    console.log(account.address);
-  }
-});
-
-// You need to export an object to set up your config
-// Go to https://hardhat.org/config/ to learn more
-
-/**
- * @type import('hardhat/config').HardhatUserConfig
- */
-const defaultNetwork = "rinkeby";
+const defaultNetwork = "rinkeby"; 
 
 function mnemonic() {
   try {
     return fs.readFileSync("./mnemonic.txt").toString().trim();
   } catch (e) {
     if (defaultNetwork !== "localhost") {
-      console.log("☢️ WARNING: No mnemonic file created for a deploy account. Try `yarn run generate` and then `yarn run account`.")
     }
   }
   return "";
@@ -39,25 +22,25 @@ module.exports = {
       url: "http://localhost:8545",
     },
     rinkeby: {
-      url: "https://rinkeby.infura.io/v3/d635ea6eddda4720824cc8b24380e4a9",
+      url: "https://rinkeby.infura.io/v3/faefe1dcd6094fb388019173d2328d8f",
       accounts: {
         mnemonic: mnemonic(),
       },
     },
     mainnet: {
-      url: "https://mainnet.infura.io/v3/d635ea6eddda4720824cc8b24380e4a9",
+      url: "https://mainnet.infura.io/v3/faefe1dcd6094fb388019173d2328d8f",
       accounts: {
         mnemonic: mnemonic(),
       },
     },
     ropsten: {
-      url: "https://ropsten.infura.io/v3/d635ea6eddda4720824cc8b24380e4a9",
+      url: "https://ropsten.infura.io/v3/faefe1dcd6094fb388019173d2328d8f",
       accounts: {
         mnemonic: mnemonic(),
       },
     },
     kovan: {
-      url: "https://ropsten.infura.io/v3/d635ea6eddda4720824cc8b24380e4a9",
+      url: "https://kovan.infura.io/v3/faefe1dcd6094fb388019173d2328d8f",
       accounts: {
         mnemonic: mnemonic(),
       },
@@ -82,7 +65,7 @@ module.exports = {
         version:"0.5.8"
       },
       {
-        version:"0.6.7"
+        version:"0.6.12"
       },
       {
         version:"0.7.0"
@@ -103,7 +86,7 @@ module.exports = {
     artifacts: "./artifacts"
   },
   mocha: {
-    timeout: 20000
+    timeout: 10000000
   }
 };
 

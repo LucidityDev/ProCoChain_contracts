@@ -4,3 +4,4 @@ node_modules
 cache
 artifacts
 mnemonic.txt
+test/mnemonic_other.txt

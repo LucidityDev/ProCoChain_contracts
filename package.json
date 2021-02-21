@@ -20,6 +20,7 @@
   },
   "scripts": {
     "chain": "npx hardhat node",
-    "test": "npx hardhat test"
+    "test": "npx hardhat test",
+    "fork": "npx hardhat node --fork https://eth-mainnet.alchemyapi.io/v2/-8qb6x_cFKbfw0yp7cM1rEyOeIHBhEL-"
   }
 }

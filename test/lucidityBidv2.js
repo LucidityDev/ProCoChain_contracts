@@ -11,7 +11,7 @@ const fs = require("fs");
 const { ethers } = require("hardhat");
 
 function mnemonic() {
-  return fs.readFileSync("./test/mnemonic.txt").toString().trim();
+  return fs.readFileSync("./test/mnemonic_other.txt").toString().trim();
 }
 
 describe("Internet Bid Lucidity Full Feature Test", function () {
@@ -22,13 +22,13 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
 
   it("connect owner and set contracts", async () => {
     overrides = {
-      gasLimit: ethers.BigNumber.from("10000000"),
+      gasLimit: 850000
     };
     
     provider = new ethers.providers.InfuraProvider("rinkeby", {
-        projectId: "d635ea6eddda4720824cc8b24380e4a9",
-        projectSecret: "b4ea2b15f0614105a64f0e8ba1f2bffa"
-      });
+      projectId: "faefe1dcd6094fb388019173d2328d8f",
+      projectSecret: "dffad28934914b97a5365fa0c2eb9de6"
+    });
 
     owner = ethers.Wallet.fromMnemonic(mnemonic()); //(Step 1) connect your mnemonic
     owner = await owner.connect(provider);
@@ -63,11 +63,8 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     const nowBalance = await fDai.connect(owner).balanceOf(owner.getAddress())
     console.log("fDai balance: ", nowBalance.toString());
 
-    const newBalance = await fDai.connect(owner).balanceOf("0x4bb9706d4B44d139C75bA4D31c430D0a8E1116aB") //project address from later
-    console.log("fDai balance contract: ", newBalance.toString());
-
     factory_address="0x7697aC32BD4cF0cAe881b93BFc8D168d5352741B"
-    project_name = "EEEFM GOV ARAUJO LIMA"
+    project_name = "EEEF TEST CE"
   });
 
   xit("deploy factory contracts", async function () { 
@@ -75,17 +72,18 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
       "BidTrackerFactory"
     );
     BidFactory = await BidFactoryContract.connect(owner).deploy(overrides);
+    await BidFactory.deployed()
     console.log(BidFactory.hash)
   });
 
-  it("initiate project", async function () {
+  xit("initiate project", async function () {
     BidFactory = new ethers.Contract(
         factory_address,
         abiNegF,
         owner
     )
 
-    await BidFactory.connect(owner).deployNewProject(
+    const createNew = await BidFactory.connect(owner).deployNewProject(
       owner.getAddress(),
       CT.address,
       SF.address,
@@ -95,11 +93,46 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
       [ethers.BigNumber.from("5"),ethers.BigNumber.from("7"),ethers.BigNumber.from("10")],
       [ethers.BigNumber.from("300"),ethers.BigNumber.from("500"),ethers.BigNumber.from("1000")],
       ethers.BigNumber.from("3"),
-      ethers.BigNumber.from("3858024691358")
+      ethers.BigNumber.from("3858024691358"),
+      overrides
     );
+    await createNew.wait(1);
+  });
+  
+  //there is some error, will have to transfer manually through metamask for now
+  it("set deposit and transfer some funds to contract", async function () {
+    BidFactory = new ethers.Contract(
+      factory_address,
+      abiNegF,
+      owner
+    )
+
+    const lawproject = await BidFactory.connect(owner).getProject(project_name);
+    console.log("project at: ", lawproject);
+    const lawProjectContract = new ethers.Contract(
+        lawproject.projectAddress, 
+        abiNeg,
+        owner
+      );
+
+    const approveTx = await fDai.connect(owner).approve(
+      lawProjectContract.address, 
+      ethers.BigNumber.from("4368024691358000") //stream amount + deposit amount. 
+    );
+    console.log(approveTx);
+    console.log(approveTx.gasLimit.toString());
+    await approveTx.wait(1);
+
+    // const sendFDAItx = await lawProjectContract.connect(owner).recieveERC20(ethers.BigNumber.from("38680246913580000"),overrides)
+    // console.log(sendFDAItx);
+    // console.log(sendFDAItx.gasPrice.toString());
+    // await sendFDAItx.wait(1);
+
+    const newBalance = await fDai.connect(owner).balanceOf(lawProjectContract.address) //project address from later
+    console.log("fDai balance contract after transfer: ", newBalance.toString());
   });
 
-  xit("bid", async function () {
+  xit("create new bid", async function () {
     BidFactory = new ethers.Contract(
       factory_address,
       abiNegF,
@@ -114,54 +147,33 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
         abiNeg,
         owner
       );
-    console.log(lawProjectContract.address)
 
-    await lawProjectContract.connect(bidder).newBidderTerms(
+    const newBid = await lawProjectContract.connect(bidder).newBidderTerms(
         [ethers.BigNumber.from("4"),ethers.BigNumber.from("6"),ethers.BigNumber.from("9")],
         [ethers.BigNumber.from("400"),ethers.BigNumber.from("600"),ethers.BigNumber.from("900")],
         ethers.BigNumber.from("3"),
-        ethers.BigNumber.from("3858024691358") //stream rate
+        ethers.BigNumber.from("3858024691358"), //stream rate
+        overrides
         )
+    console.log(newBid);
+    console.log(newBid.gasLimit.toString())
+    await newBid.wait(1)
 
     const bidderterms = await lawProjectContract.connect(owner).loadBidderTerms(bidder.getAddress())
     console.log("new bid from bidder address: ", await bidder.getAddress());
-    console.log(bidderterms); //will show up as null the first time
-    // console.log("winning bidder: ", await lawProjectContract.connect(owner).winningBidder())
+    console.log(bidderterms); 
   });
 
-  xit("set deposit and transfer some funds to contract", async function () {
-    // BidFactory = new ethers.Contract(
-    //   factory_address,
-    //   abiNegF,
-    //   owner
-    // )
+  xit("approve the bid", async function () {
+    BidFactory = new ethers.Contract(
+      factory_address,
+      abiNegF,
+      owner
+    )
 
-    // const lawproject = await BidFactory.connect(owner).getProject(project_name);
-
+    const lawproject = await BidFactory.getProject(project_name);
     const lawProjectContract = new ethers.Contract(
-      "0x4bb9706d4B44d139C75bA4D31c430D0a8E1116aB", //lawproject.projectAddress, 
-        abiNeg,
-        owner
-      );
-
-    await fDai.connect(owner).approve(
-      lawProjectContract.address, 
-      ethers.BigNumber.from("43680246913580000") //stream amount + deposit amount. May have to approve twice for some reason?
-    );
-
-    // await lawProjectContract.connect(owner).recieveERC20(ethers.BigNumber.from("38680246913580000"),overrides)
-  });
-
-  xit("approve", async function () {
-    // BidFactory = new ethers.Contract(
-    //   factory_address,
-    //   abiNegF,
-    //   owner
-    // )
-
-    // const lawproject = await BidFactory.getProject(project_name);
-    const lawProjectContract = new ethers.Contract(
-      "0x4bb9706d4B44d139C75bA4D31c430D0a8E1116aB", //lawproject.projectAddress, 
+        lawproject.projectAddress, 
         abiNeg,
         owner
       );
@@ -171,12 +183,41 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
       fDai.address,
       // parseInt((new Date('Jan-29-2021 18:40:35').getTime() / 1000).toFixed(0)),
       overrides)
+    // await approve.wait(5); //may be a bit long of a wait lol
     console.log(approve)
   });
-  //view flows on https://app.superfluid.finance/dashboard, and create an it test to view flow
   
-  //add CT functions
-  
+  //view flows on https://app.superfluid.finance/dashboard
+  xit("check on superfluid flow from project contract to winning bidder", async function () {
+    BidFactory = new ethers.Contract(
+      factory_address,
+      abiNegF,
+      owner
+    )
+
+    const lawproject = await BidFactory.getProject(project_name);
+    const lawProjectContract = new ethers.Contract(
+        lawproject.projectAddress, 
+        abiNeg,
+        owner
+      );
+    
+    const winningBidder = await lawProjectContract.winningBidder();
+    console.log(lawProjectContract.address)
+    console.log(winningBidder)
+    const data = await SFCF.connect(owner).getFlow(fDai.address, lawProjectContract.address, winningBidder)
+    console.log(data)
+
+    // /*you can get data at storage even if private lol*/
+    // let i = 0;
+    // while (i<25) {
+    //   let data_at = await ethers.provider.getStorageAt(lawProjectContract.address, i)
+    //   console.log(`Data at slot ${i}: ${data_at}`)
+    //   i+=1
+    // }
+  })
+
+  //need to update CT functions later
   xit("run through Gnosis conditional token and audit report as oracle", async function () {
     //escrow acts as oracle here
     BidFactory = new ethers.Contract(
@@ -326,37 +367,13 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
 
     //cheers you're done for now! :) Implement payback system later, where either the escrow redeems and has to return ERC20 to token contract, or bidder sends ERC20 back. 
   });
-  //test security deposit resolve
+  //test security deposit resolve/cancel flow?
 
-  ///ignore below for now///
+  ///ignore below for now until bandwidth API is nicely set up///
   xit("testing data oracle to report on milestone 3mb", async () => {
     //need to setup a new contract that acts as the data oracle on chain, so that it can be replaced if neccessary.     
 
     //this should ultimately report conditions, so oracle contract should be the auditor. 
   })
-  
-  xit("sablier create flow, check flow info", async () => {
-    //setting time boundaries, must be multiple of transfer amount 
-    const startTime = ethers.BigNumber.from(parseInt((new Date('Dec-06-2020 18:40:30').getTime() / 1000).toFixed(0)))
-    const endTime = ethers.BigNumber.from(parseInt((new Date('Dec-06-2020 18:40:35').getTime() / 1000).toFixed(0)))
-    
-    await Dai.connect(owner).approve(Sablier.address,ethers.BigNumber.from("100")) //dai approval 
-
-    streamId = await Sablier.connect(owner).createStream(bidder.getAddress(),ethers.BigNumber.from("100"),Dai.address,startTime,endTime)
-
-    //check stream balance
-    const streamInfoI = await Sablier.connect(owner).getStream(ethers.BigNumber.from("1"))
-    console.log("total stream size/deposit (dai): " + streamInfoI.deposit.toString())
-    console.log("rate per second: " + streamInfoI.ratePerSecond.toString())
-    console.log("stop time: " + new Date(parseInt(streamInfoI.stopTime.toString()) * 1000))
-
-    const balanceAfterCreate = await Dai.balanceOf(owner.getAddress())
-    console.log("Owner balance dai post stream create: " + balanceAfterCreate)
-
-    const balanceOfStream = await Sablier.connect(bidder).balanceOf(ethers.BigNumber.from("1"), bidder.getAddress())
-    console.log("Available to withdraw from stream: " + balanceOfStream)
-    // const withdrawInfo = await Sablier.connect(bidder).withdrawFromStream(streamId, ethers.BigNumber.from("100"))
-    // console.log(withdrawInfo)
-  });
 });
 
