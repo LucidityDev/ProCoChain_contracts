@@ -16,13 +16,8 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
   let BidFactory, fDai, CT, SF, SFCF;
   let factory_address;
   let owner, bidder, auditor;
-  let overrides
 
-  it("connect owner and set contracts", async () => {
-    overrides = {
-      // gasLimit: 3000000
-    };
-    
+  it("connect owner and set contracts", async () => {    
     provider = new ethers.providers.InfuraProvider("goerli", {
       projectId: "faefe1dcd6094fb388019173d2328d8f",
       projectSecret: "dffad28934914b97a5365fa0c2eb9de6"
@@ -52,11 +47,6 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
       "0xf2d68898557ccb2cf4c10c3ef2b034b2a69dad00",//rink "0x745861AeD1EEe363b4AaA5F1994Be40b1e05Ff90",
       abiSFT,
       owner)    
-    
-    // console.log(CT.functions)
-    // console.log(SF.functions)
-    // console.log(SFCF.functions)
-    // console.log(fDai.functions)
 
     const nowBalance = await fDai.connect(owner).balanceOf(owner.getAddress())
     console.log("fDai balance: ", nowBalance.toString());
