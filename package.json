@@ -21,6 +21,11 @@
   "scripts": {
     "chain": "npx hardhat node",
     "test": "npx hardhat test",
-    "fork": "npx hardhat node --fork https://eth-mainnet.alchemyapi.io/v2/-8qb6x_cFKbfw0yp7cM1rEyOeIHBhEL-"
+    "fork": "npx hardhat node --fork https://eth-mainnet.alchemyapi.io/v2/-8qb6x_cFKbfw0yp7cM1rEyOeIHBhEL-",
+    "compile": "npx hardhat compile",
+    "clean": "npx hardhat clean"
+  },
+  "devDependencies": {
+    "hardhat-docgen": "^1.0.3"
   }
 }

@@ -36,7 +36,7 @@ contract BidTracker {
     address public owner;
     address public oracleAddress;
     address public winningBidder;
-    address[] public all_bidders; //should be able to replace this with event and theGraph
+    address[] public all_bidders;
 
     //bid options initialized by owner
     uint256[] public bountySpeedTargetOwner;
@@ -110,7 +110,8 @@ contract BidTracker {
         IERC20C.transferFrom(owner, address(this), _value);
     }
 
-    ///bidding and approvals
+    /// @notice this is for new bids to be submitted for owner approval
+    /// @dev should add a check later that len _bounties is = len _bountySpeedTargets
     function newBidderTerms(
         uint256[] calldata _bountySpeedTargets,
         uint256[] calldata _bounties,
@@ -142,6 +143,9 @@ contract BidTracker {
         );
     }
 
+    /**
+    @notice Called by owner of contract to approve a bidder's terms, setting the winning bidder and starting the payments stream with a securitity deposit.
+     */
     function approveBidderTerms(address _bidder, address token) external {
         require(msg.sender == owner, "Only project owner can approve terms");
         require(ownerApproval == false, "A bid has already been approved");

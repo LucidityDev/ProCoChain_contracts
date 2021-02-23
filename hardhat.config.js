@@ -1,5 +1,6 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-etherscan");
+require('hardhat-docgen');
 const fs = require("fs");
 
 const defaultNetwork = "goerli"; 
@@ -80,6 +81,11 @@ module.exports = {
     //npx hardhat clean
     //npx hardhat verify --network goerli 0x2BABA5Cadf0f8AbB8A145A9824c2972a08edD2c0
     //npx hardhat verify --network goerli --constructor-args project_arguments.js 0xe676a458f10fa4363838a8877c74e2aa4a6518cb
+  },
+  docgen: {
+    path: './docs',
+    clear: true,
+    runOnCompile: true,
   },
   paths: {
     sources: "./contracts",

@@ -20,18 +20,18 @@ contract BidTrackerFactory {
     );
 
     /**
-    	@notice Deploys a new project AKA an instance of the BidTracker.sol contract with the following parameters:
+    	@notice Deploys a new project AKA an instance of the BidTracker.sol contract with caller as the project owner
        	@param _owner the ethereum address of the owner of a particular project
        	@param _ConditionalTokens the ethereum address of the ConditionalTokens contract
-       	@param _Superfluid the ethereum address of the Superfluid contract which allows the starting and stopping of money streams
-       	@param _ERC20 the ethereum address for the ERC20 interface contract to be used as collateral for the conditional tokens
+       	@param _Superfluid the ethereum address of the Superfluid Host contract
+        @param _CFA the Constant Flow Agreement that starts the constant _streamRate payment to the winning bidder
+       	@param _ERC20 the ethereum address for the ERC20 token to be used for payment
        	@param _name The name of the project
-       	@param _bountySpeedTargets an array of the speed targets that have bounties
+       	@param _bountySpeedTargets an array of the mbs speed targets to be set in Gnosis Conditional Tokens
        	@param _bounties an array with the bounties set for the _bountySpeedTargets array
-       	@param _streamSpeedTarget the target speed for the Internet Service Provider
-       	@param _streamAmountTotal the total amount of money to be streamed for the internet service
+       	@param _wifiSpeedTarget The target mbs speed for the Internet Service Provider
+       	@param _streamRate The per second stream rate to be sent to the winning bidder 
     **/
-
     function deployNewProject(
         address _owner,
         address _ConditionalTokens,
@@ -78,6 +78,11 @@ contract BidTrackerFactory {
         return address(newProject);
     }
 
+    /**
+    @notice Get the address of the project by name
+    @return projectAddress address of the deployed project
+    @param _name Case sensitive name of project
+     */
     function getProject(string memory _name)
         public
         view
