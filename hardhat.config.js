@@ -77,7 +77,9 @@ module.exports = {
   },
   etherscan: {
     apiKey: "FQKZCMUAQUA688R7FVDIH9BGD6698JIFPZ"
-    //npx hardhat verify --network rinkeby 0xD2820666665C127852213554E2B1cfA8A8199Ef8 "0xa55E01a40557fAB9d87F993d8f5344f1b2408072" "0x36bede640D19981A82090519bC1626249984c908" "0xF4C5310E51F6079F601a5fb7120bC72a70b96e2A" "0x745861AeD1EEe363b4AaA5F1994Be40b1e05Ff90" "EEEE ABNAEL MACHADO DE LIMA - CENE" "[5,7,10]" "[300,500,100]" "3" "500"
+    //npx hardhat clean
+    //npx hardhat verify --network goerli 0x2BABA5Cadf0f8AbB8A145A9824c2972a08edD2c0
+    //npx hardhat verify --network goerli --constructor-args project_arguments.js 0xe676a458f10fa4363838a8877c74e2aa4a6518cb
   },
   paths: {
     sources: "./contracts",
