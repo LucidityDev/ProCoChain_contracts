@@ -2,7 +2,7 @@ require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-etherscan");
 const fs = require("fs");
 
-const defaultNetwork = "rinkeby"; 
+const defaultNetwork = "goerli"; 
 
 function mnemonic() {
   try {
@@ -33,8 +33,8 @@ module.exports = {
         mnemonic: mnemonic(),
       },
     },
-    ropsten: {
-      url: "https://ropsten.infura.io/v3/faefe1dcd6094fb388019173d2328d8f",
+    goerli: {
+      url: "https://goerli.infura.io/v3/faefe1dcd6094fb388019173d2328d8f",
       accounts: {
         mnemonic: mnemonic(),
       },

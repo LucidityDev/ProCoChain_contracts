@@ -5,13 +5,11 @@ const { abi: abiSF } = require("../superfluidartifacts/Superfluid.json");
 const { abi: abiSFT } = require("../superfluidartifacts/ERC20WithTokenInfo.json");
 const { abi: abiSFCF } = require("../superfluidartifacts/ConstantFlowAgreementV1.json");
 const { abi: abiCT } = require("../artifacts/contracts/ConditionalToken.sol/ConditionalTokens.json");
-// const SuperfluidSDK = require("@superfluid-finance/js-sdk");
-// const keccak256 = require('keccak256')
 const fs = require("fs"); 
 const { ethers } = require("hardhat");
 
 function mnemonic() {
-  return fs.readFileSync("./test/mnemonic_other.txt").toString().trim();
+  return fs.readFileSync("./test/mnemonic.txt").toString().trim();
 }
 
 describe("Internet Bid Lucidity Full Feature Test", function () {
@@ -22,10 +20,10 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
 
   it("connect owner and set contracts", async () => {
     overrides = {
-      gasLimit: 850000
+      // gasLimit: 3000000
     };
     
-    provider = new ethers.providers.InfuraProvider("rinkeby", {
+    provider = new ethers.providers.InfuraProvider("goerli", {
       projectId: "faefe1dcd6094fb388019173d2328d8f",
       projectSecret: "dffad28934914b97a5365fa0c2eb9de6"
     });
@@ -36,7 +34,7 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     bidder = owner; //just to make things easier for test case. 
 
     SF = new ethers.Contract(
-      "0xeD5B5b32110c3Ded02a07c8b8e97513FAfb883B6",
+      "0x22ff293e14F1EC3A09B137e9e06084AFd63adDF9", //rink "0xeD5B5b32110c3Ded02a07c8b8e97513FAfb883B6",
       abiSF,
       owner)
     
@@ -46,12 +44,12 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
       owner)
 
     SFCF = new ethers.Contract(
-      "0xF4C5310E51F6079F601a5fb7120bC72a70b96e2A",
+      "0xEd6BcbF6907D4feEEe8a8875543249bEa9D308E8", //rink "0xF4C5310E51F6079F601a5fb7120bC72a70b96e2A",
       abiSFCF,
       owner)
 
     fDai = new ethers.Contract(
-      "0x745861AeD1EEe363b4AaA5F1994Be40b1e05Ff90",
+      "0xf2d68898557ccb2cf4c10c3ef2b034b2a69dad00",//rink "0x745861AeD1EEe363b4AaA5F1994Be40b1e05Ff90",
       abiSFT,
       owner)    
     
@@ -63,8 +61,8 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     const nowBalance = await fDai.connect(owner).balanceOf(owner.getAddress())
     console.log("fDai balance: ", nowBalance.toString());
 
-    factory_address="0x7697aC32BD4cF0cAe881b93BFc8D168d5352741B"
-    project_name = "EEEF TEST CE"
+    factory_address="0x2BABA5Cadf0f8AbB8A145A9824c2972a08edD2c0", //"0x7697aC32BD4cF0cAe881b93BFc8D168d5352741B"
+    project_name = "EMEF ENGº WADIH DARWICH ZACARIAS"
   });
 
   xit("deploy factory contracts", async function () { 
@@ -72,11 +70,12 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
       "BidTrackerFactory"
     );
     BidFactory = await BidFactoryContract.connect(owner).deploy(overrides);
+    factory_address = BidFactory.address
     await BidFactory.deployed()
-    console.log(BidFactory.hash)
+    console.log("Factory at: ", factory_address)
   });
 
-  xit("initiate project", async function () {
+  it("initiate project", async function () {
     BidFactory = new ethers.Contract(
         factory_address,
         abiNegF,
@@ -97,6 +96,7 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
       overrides
     );
     await createNew.wait(1);
+    console.log("Project deployed")
   });
   
   //there is some error, will have to transfer manually through metamask for now
@@ -117,22 +117,22 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
 
     const approveTx = await fDai.connect(owner).approve(
       lawProjectContract.address, 
-      ethers.BigNumber.from("4368024691358000") //stream amount + deposit amount. 
+      ethers.BigNumber.from("43680246913580000") //stream amount + deposit amount. 
     );
     console.log(approveTx);
     console.log(approveTx.gasLimit.toString());
     await approveTx.wait(1);
 
-    // const sendFDAItx = await lawProjectContract.connect(owner).recieveERC20(ethers.BigNumber.from("38680246913580000"),overrides)
-    // console.log(sendFDAItx);
-    // console.log(sendFDAItx.gasPrice.toString());
-    // await sendFDAItx.wait(1);
+    const sendFDAItx = await lawProjectContract.connect(owner).recieveERC20(ethers.BigNumber.from("33680246913580000"),{gasLimit:3000000})
+    console.log(sendFDAItx);
+    console.log(sendFDAItx.gasLimit.toString());
+    await sendFDAItx.wait(1);
 
     const newBalance = await fDai.connect(owner).balanceOf(lawProjectContract.address) //project address from later
     console.log("fDai balance contract after transfer: ", newBalance.toString());
   });
 
-  xit("create new bid", async function () {
+  it("create new bid", async function () {
     BidFactory = new ethers.Contract(
       factory_address,
       abiNegF,
@@ -164,7 +164,7 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     console.log(bidderterms); 
   });
 
-  xit("approve the bid", async function () {
+  it("approve the bid", async function () {
     BidFactory = new ethers.Contract(
       factory_address,
       abiNegF,
@@ -182,13 +182,13 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
       bidder.getAddress(),
       fDai.address,
       // parseInt((new Date('Jan-29-2021 18:40:35').getTime() / 1000).toFixed(0)),
-      overrides)
-    // await approve.wait(5); //may be a bit long of a wait lol
+      {gasLimit:3000000})
+    await approve.wait(5); //may be a bit long of a wait lol
     console.log(approve)
   });
   
   //view flows on https://app.superfluid.finance/dashboard
-  xit("check on superfluid flow from project contract to winning bidder", async function () {
+  it("check on superfluid flow from project contract to winning bidder", async function () {
     BidFactory = new ethers.Contract(
       factory_address,
       abiNegF,
