@@ -29,7 +29,7 @@ contract BidTracker {
     using Int96SafeMath for int96;
     using SafeMath for uint256;
 
-    //tracking variables
+    //state tracking variables
     bool public ownerApproval = false;
     bool public noncompliant = false;
     string public projectName;
@@ -42,16 +42,16 @@ contract BidTracker {
     uint256[] public bountySpeedTargetOwner;
     uint256[] public targetBountyOwner;
     uint256 public wifiSpeedOwner;
-    uint256 public securityDeposit = 10000000000000; //can be changed in the future
+    uint256 public securityDeposit = 1e13; //can be set in the future
     int96 public streamRateOwner;
 
-    //bids need to be private
+    //bids need to be private eventually in zksync
     mapping(address => uint256[]) private BidderToTargets;
     mapping(address => uint256[]) private BidderToBounties;
     mapping(address => uint256) private BidderToWifiSpeed; //speed of wifi
     mapping(address => int96) private BidderToStreamRate; //rate of payment
 
-    //interfaces - is it better to store variable or create a new instance in each function call?
+    //interfaces
     IERC1155 private IERC1155C;
     IERC20 private IERC20C;
     IConditionalTokens private ICT;
@@ -144,11 +144,12 @@ contract BidTracker {
     }
 
     /**
-    @notice Called by owner of contract to approve a bidder's terms, setting the winning bidder and starting the payments stream with a securitity deposit.
+    @notice Called by owner of contract to approve a bidder's terms, setting the winning bidder and starting the payments stream with a security deposit.
      */
     function approveBidderTerms(address _bidder, address token) external {
         require(msg.sender == owner, "Only project owner can approve terms");
         require(ownerApproval == false, "A bid has already been approved");
+        require(BidderToStreamRate[msg.sender] != 0, "bidder must exist");
 
         setDeposit();
         startFlow(token, _bidder, streamRateOwner);
@@ -265,7 +266,8 @@ contract BidTracker {
         );
     }
 
-    //////External view functions. May be unneccesary due to theGraph.
+    //External view functions
+
     //loads owner terms for bidder to see.
     function loadOwnerTerms()
         external

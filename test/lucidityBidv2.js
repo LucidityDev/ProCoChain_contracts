@@ -34,7 +34,7 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
       owner)
     
     CT = new ethers.Contract(
-      "0x36bede640D19981A82090519bC1626249984c908",
+      "0xfcD223b445e8F7e76aBAB2Fa49e5cd190FDc3474",// rink"0x36bede640D19981A82090519bC1626249984c908",
       abiCT,
       owner)
 
@@ -55,17 +55,24 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     project_name = "EMEF ENGº WADIH DARWICH ZACARIAS"
   });
 
+  xit("deploy GCT if on Goerli", async function() {
+    const CTContract = await ethers.getContractFactory("ConditionalTokens"); //contract name here
+    CT = await CTContract.connect(owner).deploy();
+    await CT.deployed()
+    console.log("CT at: ", CT.address)
+  })
+
   xit("deploy factory contracts", async function () { 
     const BidFactoryContract = await ethers.getContractFactory(
       "BidTrackerFactory"
     );
-    BidFactory = await BidFactoryContract.connect(owner).deploy(overrides);
+    BidFactory = await BidFactoryContract.connect(owner).deploy();
     factory_address = BidFactory.address
     await BidFactory.deployed()
     console.log("Factory at: ", factory_address)
   });
 
-  it("initiate project", async function () {
+  xit("initiate project", async function () {
     BidFactory = new ethers.Contract(
         factory_address,
         abiNegF,
@@ -90,7 +97,7 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
   });
   
   //there is some error, will have to transfer manually through metamask for now
-  it("set deposit and transfer some funds to contract", async function () {
+  xit("set deposit and transfer some funds to contract", async function () {
     BidFactory = new ethers.Contract(
       factory_address,
       abiNegF,
@@ -122,7 +129,7 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     console.log("fDai balance contract after transfer: ", newBalance.toString());
   });
 
-  it("create new bid", async function () {
+  xit("create new bid", async function () {
     BidFactory = new ethers.Contract(
       factory_address,
       abiNegF,
@@ -154,7 +161,7 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     console.log(bidderterms); 
   });
 
-  it("approve the bid", async function () {
+  xit("approve the bid", async function () {
     BidFactory = new ethers.Contract(
       factory_address,
       abiNegF,
@@ -178,7 +185,7 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
   });
   
   //view flows on https://app.superfluid.finance/dashboard
-  it("check on superfluid flow from project contract to winning bidder", async function () {
+  xit("check on superfluid flow from project contract to winning bidder", async function () {
     BidFactory = new ethers.Contract(
       factory_address,
       abiNegF,
