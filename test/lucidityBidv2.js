@@ -51,8 +51,8 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     const nowBalance = await fDai.connect(owner).balanceOf(owner.getAddress())
     console.log("fDai balance: ", nowBalance.toString());
 
-    factory_address="0x2BABA5Cadf0f8AbB8A145A9824c2972a08edD2c0", //"0x7697aC32BD4cF0cAe881b93BFc8D168d5352741B"
-    project_name = "EMEF ENGº WADIH DARWICH ZACARIAS"
+    factory_address="0xcb3A1Ca5ea8F520DED696F3Abf67dE5d0eED5a71", //"0x7697aC32BD4cF0cAe881b93BFc8D168d5352741B"
+    project_name = "EEEFM GOV JESUS BURLAMAQUI HOSANNAH"
   });
 
   xit("deploy GCT if on Goerli", async function() {
@@ -89,8 +89,7 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
       [ethers.BigNumber.from("5"),ethers.BigNumber.from("7"),ethers.BigNumber.from("10")],
       [ethers.BigNumber.from("300"),ethers.BigNumber.from("500"),ethers.BigNumber.from("1000")],
       ethers.BigNumber.from("3"),
-      ethers.BigNumber.from("3858024691358"),
-      overrides
+      ethers.BigNumber.from("3858024691358")
     );
     await createNew.wait(1);
     console.log("Project deployed")
@@ -129,14 +128,14 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
     console.log("fDai balance contract after transfer: ", newBalance.toString());
   });
 
-  xit("create new bid", async function () {
+  it("create new bid", async function () {
     BidFactory = new ethers.Contract(
       factory_address,
       abiNegF,
       owner
     )
 
-    const lawproject = await BidFactory.getProject(project_name, overrides);
+    const lawproject = await BidFactory.getProject(project_name);
     console.log(lawproject)
 
     const lawProjectContract = new ethers.Contract(
@@ -150,7 +149,7 @@ describe("Internet Bid Lucidity Full Feature Test", function () {
         [ethers.BigNumber.from("400"),ethers.BigNumber.from("600"),ethers.BigNumber.from("900")],
         ethers.BigNumber.from("3"),
         ethers.BigNumber.from("3858024691358"), //stream rate
-        overrides
+        {gasLimit: 5000000}
         )
     console.log(newBid);
     console.log(newBid.gasLimit.toString())

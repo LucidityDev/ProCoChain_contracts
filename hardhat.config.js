@@ -79,8 +79,8 @@ module.exports = {
   etherscan: {
     apiKey: "FQKZCMUAQUA688R7FVDIH9BGD6698JIFPZ"
     //npx hardhat clean
-    //npx hardhat verify --network goerli 0x2BABA5Cadf0f8AbB8A145A9824c2972a08edD2c0
-    //npx hardhat verify --network goerli --constructor-args project_arguments.js 0xe676a458f10fa4363838a8877c74e2aa4a6518cb
+    //npx hardhat verify --network goerli 0xcb3a1ca5ea8f520ded696f3abf67de5d0eed5a71
+    //npx hardhat verify --network goerli --constructor-args project_arguments.js 0x2A9Da05a6F90659eF096fB34B639b33cED8635F9
   },
   docgen: {
     path: './docs',
